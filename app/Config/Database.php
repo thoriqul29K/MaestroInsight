@@ -25,23 +25,30 @@ class Database extends Config
      * @var array<string, mixed>
      */
     public array $default = [
-        'DSN'          => '',
-        'hostname'     => 'localhost',
-        'username'     => '',
-        'password'     => '',
-        'database'     => '',
-        'DBDriver'     => 'MySQLi',
-        'DBPrefix'     => '',
-        'pConnect'     => false,
-        'DBDebug'      => true,
-        'charset'      => 'utf8mb4',
-        'DBCollat'     => 'utf8mb4_general_ci',
-        'swapPre'      => '',
-        'encrypt'      => false,
-        'compress'     => false,
-        'strictOn'     => false,
-        'failover'     => [],
-        'port'         => 3306,
+        'DSN'      => '',
+        'hostname' => 'localhost',
+        'username' => '',
+        'password' => '',
+        'database' => '',
+        'DBDriver' => 'MySQLi',
+        'DBPrefix' => '',
+        'pConnect' => false,
+        'DBDebug'  => true,
+        'charset'  => 'utf8mb4',
+        'DBCollat' => 'utf8mb4_general_ci',
+        'swapPre'  => '',
+        'encrypt'  => [
+            'ssl_key'    => '',
+            'ssl_cert'   => '',
+            'ssl_ca'     => '',
+            'ssl_capath' => '',
+            'ssl_cipher' => '',
+            'ssl_verify' => true,
+        ],
+        'compress' => false,
+        'strictOn' => false,
+        'failover' => [],
+        'port'     => 3306,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [
@@ -194,11 +201,31 @@ class Database extends Config
     {
         parent::__construct();
 
-        // Ensure that we always set the database group to 'tests' if
-        // we are currently running an automated test suite, so that
-        // we don't overwrite live data on accident.
+        // Override defaults from environment variables (must be in constructor)
+        $this->default['hostname'] = env('database.default.hostname', 'localhost');
+        $this->default['username'] = env('database.default.username', '');
+        $this->default['password'] = env('database.default.password', '');
+        $this->default['database'] = env('database.default.database', '');
+        $this->default['DBDriver'] = env('database.default.DBDriver', 'MySQLi');
+        $this->default['DBPrefix'] = env('database.default.DBPrefix', '');
+        $this->default['port']     = (int) env('database.default.port', 3306);
+        $this->default['DBDebug']  = (ENVIRONMENT !== 'production');
+
+        // Allow test environment to override its DB connection
+        if (env('database.tests.hostname') !== null) {
+            $this->tests['hostname'] = env('database.tests.hostname');
+            $this->tests['username'] = env('database.tests.username', '');
+            $this->tests['password'] = env('database.tests.password', '');
+            $this->tests['database'] = env('database.tests.database', '');
+            $this->tests['DBDriver'] = env('database.tests.DBDriver', 'MySQLi');
+            $this->tests['DBPrefix'] = env('database.tests.DBPrefix', '');
+            $this->tests['port']     = (int) env('database.tests.port', 3306);
+        }
+
+        // Use default DB group even in tests so the application can be tested
+        // against the same MySQL instance without destructive migration refresh.
         if (ENVIRONMENT === 'testing') {
-            $this->defaultGroup = 'tests';
+            $this->defaultGroup = 'default';
         }
     }
 }
