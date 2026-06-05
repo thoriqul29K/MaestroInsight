@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="<?= base_url() ?>assets/css/login.css">
     <link rel="icon" type="image/x-icon" href="<?= base_url() ?>assets/img/favicon.ico">
 </head>
+
 <body class="login-body">
     <div class="login-wrapper">
         <div class="login-card">
@@ -46,9 +48,10 @@
                 <button type="submit" class="btn btn-primary btn-block">Masuk</button>
             </form>
             <div class="login-footer">
-                <small>Default: <strong>admin / admin123</strong></small>
+                <!-- <small>Default: <strong>admin / admin123</strong></small> -->
             </div>
         </div>
     </div>
 </body>
+
 </html>

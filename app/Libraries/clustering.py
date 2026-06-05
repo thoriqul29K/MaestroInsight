@@ -12,12 +12,16 @@ import os
 import csv
 import json
 import tempfile
+import signal
+import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy.cluster.hierarchy import linkage, fcluster
 from sklearn.preprocessing import MinMaxScaler
+
+DEFAULT_TIMEOUT_SECONDS = 300
 
 try:
     import pymysql
@@ -55,10 +59,62 @@ def normalize(df):
     return features, scaler
 
 
-def hierarchical_cluster(features, n_clusters=5, method='ward', metric='euclidean'):
-    """Hierarchical clustering agglomerative."""
-    Z = linkage(features, method=method, metric=metric)
-    labels = fcluster(Z, t=n_clusters, criterion='maxclust')
+def hierarchical_cluster(features, n_clusters=5, method='ward', metric='euclidean', timeout_seconds=DEFAULT_TIMEOUT_SECONDS):
+    """Hierarchical clustering agglomerative.
+
+    Menjalankan linkage dengan watchdog berbasis signal (Unix) atau
+    thread timer (Windows + Unix fallback). Linkage scipy bersifat
+    blocking, jadi pendekatan ini mematikan proses Python ketika
+    melewati timeout sehingga PHP tidak freeze di shell_exec.
+    """
+    n = len(features)
+
+    print(f"[clustering] mulai: n={n}, k={n_clusters}, method={method}, metric={metric}", flush=True)
+
+    if n <= 0:
+        return None, np.array([], dtype=int)
+
+    if n > 5000 and method == 'ward':
+        print(
+            "[clustering] WARNING: dataset besar (n>5000). Hierarchical clustering O(n^2) "
+            "mungkin lambat. Pertimbangkan untuk mengambil sample.",
+            flush=True,
+        )
+
+    timed_out = {'flag': False}
+
+    def _timeout_handler():
+        timed_out['flag'] = True
+        print("[clustering] ERROR: timeout tercapai, proses dihentikan.", flush=True)
+        os._exit(124)
+
+    timer = None
+    use_signal = hasattr(signal, 'SIGALRM') and sys.platform != 'win32'
+
+    if use_signal:
+        signal.signal(signal.SIGALRM, lambda *_: _timeout_handler())
+        signal.alarm(int(timeout_seconds))
+    else:
+        import threading
+        timer = threading.Timer(int(timeout_seconds), _timeout_handler)
+        timer.daemon = True
+        timer.start()
+
+    try:
+        start = time.time()
+        Z = linkage(features, method=method, metric=metric)
+        elapsed = time.time() - start
+        print(f"[clustering] linkage selesai dalam {elapsed:.2f}s", flush=True)
+        labels = fcluster(Z, t=n_clusters, criterion='maxclust')
+    finally:
+        if use_signal:
+            signal.alarm(0)
+        if timer is not None:
+            timer.cancel()
+
+    if timed_out['flag']:
+        raise TimeoutError("Hierarchical clustering melebihi batas waktu yang ditentukan")
+
     return Z, labels
 
 
@@ -131,27 +187,44 @@ def main():
     """Entry point.
 
     Mode 1 (CSV round-trip):
-        python clustering.py <input_csv> <output_csv>
+        python clustering.py <input_csv> <output_csv> [--timeout SECONDS]
 
     Mode 2 (Direct DB):
-        python clustering.py --db <input_csv> <output_csv>
+        python clustering.py --db <input_csv> <output_csv> [--timeout SECONDS]
     """
     if len(sys.argv) < 3:
         print(json.dumps({
             'status': 'error',
-            'message': 'Usage: clustering.py <input_csv> <output_csv> atau --db <input_csv> <output_csv>'
+            'message': 'Usage: clustering.py <input_csv> <output_csv> [--timeout SECONDS]'
         }))
         sys.exit(1)
 
     args = sys.argv[1:]
 
     use_db = False
-    if args[0] == '--db':
+    timeout_seconds = DEFAULT_TIMEOUT_SECONDS
+    if args and args[0] == '--db':
         use_db = True
         args = args[1:]
 
+    while args and args[0] == '--timeout':
+        try:
+            timeout_seconds = int(args[1])
+        except (IndexError, ValueError):
+            pass
+        args = args[2:]
+
+    if len(args) < 2:
+        print(json.dumps({
+            'status': 'error',
+            'message': 'Argument tidak lengkap. Usage: clustering.py <input_csv> <output_csv> [--timeout SECONDS]'
+        }))
+        sys.exit(1)
+
     input_csv  = args[0]
     output_csv = args[1]
+
+    print(f"[clustering] timeout diset: {timeout_seconds}s", flush=True)
 
     try:
         if use_db:
@@ -166,12 +239,16 @@ def main():
             df = load_data_from_csv(input_csv)
 
         if df.empty:
-            print(json.dumps({'status': 'empty', 'count': 0}))
+            print(json.dumps({'status': 'empty', 'count': 0}), flush=True)
             write_output(pd.DataFrame(columns=['id_pelanggan', 'segment']), output_csv)
             sys.exit(0)
 
         features, _ = normalize(df)
-        _, labels = hierarchical_cluster(features, n_clusters=5)
+        _, labels = hierarchical_cluster(
+            features,
+            n_clusters=5,
+            timeout_seconds=timeout_seconds,
+        )
         result = label_segments(df, labels, n_clusters=5)
         write_output(result, output_csv)
 
@@ -180,14 +257,14 @@ def main():
             'status': 'ok',
             'count': len(result),
             'segments': summary,
-        }, indent=2))
+        }, indent=2), flush=True)
         sys.exit(0)
 
     except Exception as e:
         print(json.dumps({
             'status': 'error',
             'message': str(e),
-        }))
+        }), flush=True)
         sys.exit(1)
 
 

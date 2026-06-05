@@ -29,4 +29,6 @@ $baseURL = base_url();
 
 <?= $this->renderSection('main') ?>
 
+<?= $this->renderSection('scripts') ?>
+
 <?= $this->include('layouts/footer') ?>
