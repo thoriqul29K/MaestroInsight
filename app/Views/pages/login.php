@@ -5,16 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | MaestroInsight</title>
-    <link rel="stylesheet" href="<?= base_url() ?>assets/css/style.css">
-    <link rel="stylesheet" href="<?= base_url() ?>assets/css/login.css">
-    <link rel="icon" type="image/x-icon" href="<?= base_url() ?>assets/img/favicon.ico">
+    <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/login.css') ?>">
+    <link rel="icon" type="image/x-icon" href="<?= base_url('assets/img/favicon.ico') ?>">
 </head>
 
 <body class="login-body">
     <div class="login-wrapper">
         <div class="login-card">
             <div class="login-header">
-                <img src="<?= base_url() ?>assets/img/Maestro Logo (640 x 640).jpg" alt="Maestro" class="login-logo">
+                <img src="<?= base_url('assets/img/maestro-logo-640x640.jpg') ?>" alt="Maestro" class="login-logo">
                 <h1>MaestroInsight</h1>
                 <p>CRM Segmentasi Pelanggan<br>PT. Maestro Wisata Raya</p>
             </div>

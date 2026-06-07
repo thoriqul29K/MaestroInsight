@@ -105,6 +105,8 @@ class PromosiController extends BaseController
         $status  = $this->request->getGet('status');
         $channel = $this->request->getGet('channel');
 
+        $hasFilter = ($status !== null && $status !== '') || ($channel !== null && $channel !== '');
+
         $data = [
             'title'         => 'Riwayat Promosi',
             'pageTitle'     => 'Riwayat Promosi',
@@ -112,8 +114,39 @@ class PromosiController extends BaseController
             'logs'          => $this->logModel->getFiltered(50, $status, $channel),
             'filterStatus'  => $status ?? '',
             'filterChannel' => $channel ?? '',
+            'hasFilter'     => $hasFilter,
+            'filterCount'   => $hasFilter ? $this->logModel->countFiltered($status, $channel) : 0,
         ];
         return view('pages/promosi/riwayat', $data);
+    }
+
+    public function hapusLog()
+    {
+        $mode = $this->request->getPost('mode');
+
+        if ($mode === 'filtered') {
+            $status  = $this->request->getPost('filter_status');
+            $channel = $this->request->getPost('filter_channel');
+            $deleted = $this->logModel->deleteFiltered(
+                ($status  !== null && $status  !== '') ? $status  : null,
+                ($channel !== null && $channel !== '') ? $channel : null,
+            );
+            $msg = "Berhasil menghapus {$deleted} riwayat promosi (sesuai filter aktif).";
+        } else {
+            $ids = (array) $this->request->getPost('id_log');
+            $ids = array_values(array_filter($ids, static fn ($v) => ctype_digit((string) $v)));
+
+            if (empty($ids)) {
+                return redirect()->to('/promosi/riwayat')
+                    ->with('error', 'Pilih minimal satu riwayat untuk dihapus.');
+            }
+
+            $deleted = $this->logModel->whereIn('id', $ids)->delete();
+            $msg     = "Berhasil menghapus {$deleted} riwayat promosi.";
+        }
+
+        return redirect()->to('/promosi/riwayat')
+            ->with($deleted > 0 ? 'success' : 'error', $msg);
     }
 
     public function personalize(string $pesan, array $pelanggan): string

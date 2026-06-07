@@ -37,4 +37,5 @@ $routes->group('', ['filter' => 'auth'], function ($routes) {
     $routes->get('promosi',         'PromosiController::index');
     $routes->post('promosi/kirim',  'PromosiController::kirim');
     $routes->get('promosi/riwayat', 'PromosiController::riwayat');
+    $routes->post('promosi/riwayat/hapus', 'PromosiController::hapusLog');
 });

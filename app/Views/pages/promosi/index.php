@@ -38,22 +38,22 @@
             <i class="bi bi-clock-history"></i> Riwayat
         </a>
     </div>
-    <form action="<?= base_url() ?>promosi/kirim" method="post" id="formPromosi">
+    <form action="<?= base_url() ?>promosi/kirim" method="post" id="formPromosi" class="form">
         <?= csrf_field() ?>
         <div class="form-row">
             <div class="form-group">
                 <label for="channel">Kanal Pengiriman *</label>
                 <select id="channel" name="channel" required>
                     <option value="email" selected>Email</option>
-                    <option value="whatsapp" disabled>WhatsApp (segera)</option>
+                    <option value="whatsapp" disabled>WhatsApp (Dalam Pengembangan)</option>
                 </select>
             </div>
         </div>
         <div class="form-group">
             <label for="subject">Subjek Email *</label>
             <input type="text" id="subject" name="subject" required maxlength="255"
-                   value="<?= old('subject') ?>"
-                   placeholder="cth: Diskon 25% Akhir Bulan untuk Anda">
+                value="<?= old('subject') ?>"
+                placeholder="cth: Diskon 25% Akhir Bulan untuk Anda">
         </div>
         <div class="form-group">
             <label for="pesan">Pesan Promosi *</label>
@@ -127,42 +127,42 @@
 
 <?= $this->section('scripts') ?>
 <script>
-document.getElementById('checkAll')?.addEventListener('change', function(e) {
-    document.querySelectorAll('.chk-pelanggan').forEach(cb => cb.checked = e.target.checked);
-});
+    document.getElementById('checkAll')?.addEventListener('change', function(e) {
+        document.querySelectorAll('.chk-pelanggan').forEach(cb => cb.checked = e.target.checked);
+    });
 
-(function() {
-    const form = document.getElementById('formPromosi');
-    const modal = document.getElementById('confirmModal');
-    if (!form || !modal) return;
+    (function() {
+        const form = document.getElementById('formPromosi');
+        const modal = document.getElementById('confirmModal');
+        if (!form || !modal) return;
 
-    const countEl = document.getElementById('confirmCount');
+        const countEl = document.getElementById('confirmCount');
 
-    form.addEventListener('submit', function(e) {
-        const checked = form.querySelectorAll('.chk-pelanggan:checked').length;
-        if (checked === 0) {
+        form.addEventListener('submit', function(e) {
+            const checked = form.querySelectorAll('.chk-pelanggan:checked').length;
+            if (checked === 0) {
+                e.preventDefault();
+                alert('Pilih minimal satu pelanggan.');
+                return;
+            }
             e.preventDefault();
-            alert('Pilih minimal satu pelanggan.');
-            return;
-        }
-        e.preventDefault();
-        countEl.textContent = checked;
-        modal.showModal();
-    });
+            countEl.textContent = checked;
+            modal.showModal();
+        });
 
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            modal.close();
-            return;
-        }
-        const action = e.target.dataset.action;
-        if (action === 'cancel') {
-            modal.close();
-        } else if (action === 'confirm') {
-            modal.close();
-            form.submit();
-        }
-    });
-})();
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.close();
+                return;
+            }
+            const action = e.target.dataset.action;
+            if (action === 'cancel') {
+                modal.close();
+            } else if (action === 'confirm') {
+                modal.close();
+                form.submit();
+            }
+        });
+    })();
 </script>
 <?= $this->endSection() ?>

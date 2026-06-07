@@ -52,4 +52,32 @@ class PromosiLogModel extends Model
 
         return $result;
     }
+
+    public function countFiltered(?string $status = null, ?string $channel = null): int
+    {
+        $builder = $this;
+
+        if ($status !== null && $status !== '') {
+            $builder = $builder->where('status', $status);
+        }
+        if ($channel !== null && $channel !== '') {
+            $builder = $builder->where('channel', $channel);
+        }
+
+        return $builder->countAllResults();
+    }
+
+    public function deleteFiltered(?string $status = null, ?string $channel = null): int
+    {
+        $builder = $this;
+
+        if ($status !== null && $status !== '') {
+            $builder = $builder->where('status', $status);
+        }
+        if ($channel !== null && $channel !== '') {
+            $builder = $builder->where('channel', $channel);
+        }
+
+        return $builder->delete();
+    }
 }
