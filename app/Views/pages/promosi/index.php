@@ -38,7 +38,7 @@
             <i class="bi bi-clock-history"></i> Riwayat
         </a>
     </div>
-    <form action="<?= base_url() ?>promosi/kirim" method="post" id="formPromosi" class="form">
+    <form action="<?= base_url() ?>promosi/kirim" method="post" id="formPromosi" class="form" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="form-row">
             <div class="form-group">
@@ -59,6 +59,17 @@
             <label for="pesan">Pesan Promosi *</label>
             <textarea id="pesan" name="pesan" rows="5" required placeholder="Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen}..."><?= old('pesan') ?: "Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen} di PT. Maestro Wisata Raya. Hubungi kami sekarang juga!" ?></textarea>
             <small class="hint">Gunakan <code>{nama}</code> (nama lengkap) dan <code>{segmen}</code> untuk personalisasi otomatis.</small>
+        </div>
+        <div class="form-group">
+            <label for="gambar">Lampiran Gambar (Opsional)</label>
+            <input type="file" id="gambar" name="gambar" accept="image/jpeg,image/png,image/gif,image/webp">
+            <small class="hint">Format: JPG, PNG, GIF, WebP. Maks. 5MB.</small>
+            <div id="imagePreview" class="image-preview" hidden>
+                <img id="previewImg" src="" alt="Preview">
+                <button type="button" class="btn btn-sm btn-secondary" id="removeImage">
+                    <i class="bi bi-x-circle"></i> Hapus
+                </button>
+            </div>
         </div>
 
         <h3>Daftar Pelanggan</h3>
@@ -126,6 +137,26 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<style>
+.image-preview {
+    margin-top: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px;
+    display: inline-block;
+    max-width: 300px;
+}
+.image-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 8px;
+}
+.image-preview[hidden] {
+    display: none;
+}
+</style>
 <script>
     document.getElementById('checkAll')?.addEventListener('change', function(e) {
         document.querySelectorAll('.chk-pelanggan').forEach(cb => cb.checked = e.target.checked);
@@ -164,5 +195,31 @@
             }
         });
     })();
+
+    const fileInput  = document.getElementById('gambar');
+    const preview    = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const removeBtn  = document.getElementById('removeImage');
+
+    fileInput?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                previewImg.src = ev.target.result;
+                preview.hidden = false;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.hidden = true;
+            previewImg.src = '';
+        }
+    });
+
+    removeBtn?.addEventListener('click', function() {
+        fileInput.value = '';
+        preview.hidden = true;
+        previewImg.src = '';
+    });
 </script>
 <?= $this->endSection() ?>

@@ -38,6 +38,7 @@ class PromosiController extends BaseController
             'channel'      => 'required|in_list[email]',
             'subject'      => 'required|max_length[255]',
             'pesan'        => 'required|min_length[3]',
+            'gambar'       => 'permit_empty|is_image[gambar]|max_size[gambar,5120]',
         ];
 
         if (! $this->validate($rules)) {
@@ -56,7 +57,17 @@ class PromosiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Tidak ada pelanggan yang memiliki alamat email valid pada pilihan Anda.');
         }
 
-        $results = $this->sender->send('email', $withEmail, $subject, $pesan, [$this, 'personalize']);
+        $attachmentPath = null;
+        $attachmentName = null;
+
+        $fileGambar = $this->request->getFile('gambar');
+        if ($fileGambar !== null && $fileGambar->isValid() && ! $fileGambar->hasMoved()) {
+            $attachmentName = $fileGambar->getRandomName();
+            $fileGambar->move(WRITEPATH . 'uploads/promosi', $attachmentName);
+            $attachmentPath = WRITEPATH . 'uploads/promosi' . DIRECTORY_SEPARATOR . $attachmentName;
+        }
+
+        $results = $this->sender->send('email', $withEmail, $subject, $pesan, [$this, 'personalize'], $attachmentPath);
 
         $sent   = 0;
         $failed = 0;
@@ -68,13 +79,14 @@ class PromosiController extends BaseController
             $isOk  = $res->success;
 
             $this->logModel->insert([
-                'id_pelanggan'   => $p['id'] ?? null,
-                'nama_pelanggan' => $p['nama_pelanggan'] ?? null,
-                'email_target'   => $p['email'] ?? null,
-                'channel'        => $channel,
-                'subject'        => $subject,
-                'status'         => $isOk ? 'success' : 'failed',
-                'error_message'  => $isOk ? null : ($res->errorMessage ?? 'Unknown error'),
+                'id_pelanggan'         => $p['id'] ?? null,
+                'nama_pelanggan'       => $p['nama_pelanggan'] ?? null,
+                'email_target'         => $p['email'] ?? null,
+                'channel'              => $channel,
+                'subject'              => $subject,
+                'status'               => $isOk ? 'success' : 'failed',
+                'error_message'        => $isOk ? null : ($res->errorMessage ?? 'Unknown error'),
+                'attachment_filename'  => $attachmentName,
             ]);
 
             if ($isOk) {

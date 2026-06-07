@@ -31,7 +31,7 @@ class PromosiSender
      * @param  array<int,array<string,mixed>> $pelangganList
      * @return array<int,array{pelanggan: array<string,mixed>, result: SendResult}>
      */
-    public function send(string $channelName, array $pelangganList, string $subject, string $body, ?callable $personalizer = null): array
+    public function send(string $channelName, array $pelangganList, string $subject, string $body, ?callable $personalizer = null, ?string $attachment = null): array
     {
         if (! isset($this->channels[$channelName])) {
             throw new RuntimeException("Channel '{$channelName}' belum terdaftar di PromosiSender.");
@@ -44,7 +44,7 @@ class PromosiSender
             $finalBody = $personalizer ? $personalizer($body, $p) : $body;
             $results[] = [
                 'pelanggan' => $p,
-                'result'    => $channel->send($p, $subject, $finalBody),
+                'result'    => $channel->send($p, $subject, $finalBody, $attachment),
             ];
         }
 

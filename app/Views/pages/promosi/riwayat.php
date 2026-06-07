@@ -82,6 +82,7 @@
                             <th>Channel</th>
                             <th>Subjek</th>
                             <th>Status</th>
+                            <th>Lampiran</th>
                             <th>Pesan Error</th>
                         </tr>
                     </thead>
@@ -101,6 +102,15 @@
                                         <span class="badge badge-success"><i class="bi bi-check-circle"></i> Berhasil</span>
                                     <?php else: ?>
                                         <span class="badge badge-failed"><i class="bi bi-x-circle"></i> Gagal</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if (! empty($log['attachment_filename'])): ?>
+                                        <span class="badge badge-default" title="<?= esc($log['attachment_filename']) ?>">
+                                            <i class="bi bi-paperclip"></i> Ada
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>

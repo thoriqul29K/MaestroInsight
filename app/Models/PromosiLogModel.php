@@ -18,6 +18,7 @@ class PromosiLogModel extends Model
         'subject',
         'status',
         'error_message',
+        'attachment_filename',
     ];
 
     public function getFiltered(int $limit = 50, ?string $status = null, ?string $channel = null): array
