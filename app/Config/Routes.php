@@ -30,10 +30,11 @@ $routes->group('', ['filter' => 'auth'], function ($routes) {
     $routes->post('transaksi/update/(:num)',  'TransaksiController::update/$1');
     $routes->get('transaksi/delete/(:num)',   'TransaksiController::delete/$1');
 
-    $routes->get('analisis',                 'AnalisisController::index');
-    $routes->post('analisis/proses-rfm',     'AnalisisController::prosesRFM');
-    $routes->post('analisis/proses-segmentasi', 'AnalisisController::prosesSegmentasi');
+    $routes->get('analisis',                     'AnalisisController::index');
+    $routes->get('analisis/progress',            'AnalisisController::progress');
+    $routes->post('analisis/proses-rfm-cluster', 'AnalisisController::prosesRFMCluster');
 
     $routes->get('promosi',         'PromosiController::index');
     $routes->post('promosi/kirim',  'PromosiController::kirim');
+    $routes->get('promosi/riwayat', 'PromosiController::riwayat');
 });

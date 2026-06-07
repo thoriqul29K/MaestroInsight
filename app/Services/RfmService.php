@@ -99,12 +99,33 @@ class RfmService
     public function exportToCSV(string $path): bool
     {
         $data = $this->rfm->findAll();
-        $fh = fopen($path, 'w');
+
+        $dir = dirname($path);
+        if (! is_dir($dir)) {
+            if (! @mkdir($dir, 0755, true) && ! is_dir($dir)) {
+                log_message('error', "[RfmService::exportToCSV] Gagal membuat direktori: {$dir}");
+                return false;
+            }
+        }
+
+        $fh = @fopen($path, 'w');
+        if ($fh === false) {
+            $err = error_get_last()['message'] ?? 'unknown';
+            log_message('error', "[RfmService::exportToCSV] Gagal membuka file untuk ditulis: {$path}. Error: {$err}");
+            return false;
+        }
+
         fputcsv($fh, ['id_pelanggan', 'recency', 'frequency', 'monetary']);
         foreach ($data as $row) {
             fputcsv($fh, [$row['id_pelanggan'], $row['recency'], $row['frequency'], $row['monetary']]);
         }
         fclose($fh);
+
+        if (! is_file($path) || filesize($path) === 0) {
+            log_message('error', "[RfmService::exportToCSV] File CSV kosong/tidak ada setelah tulis: {$path}");
+            return false;
+        }
+
         return true;
     }
 

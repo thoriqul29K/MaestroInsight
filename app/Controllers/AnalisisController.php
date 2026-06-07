@@ -31,16 +31,7 @@ class AnalisisController extends BaseController
         return view('pages/analisis/index', $data);
     }
 
-    public function prosesRFM()
-    {
-        $result = $this->rfm->hitungRFM();
-        if (($result['status'] ?? '') === 'empty') {
-            return redirect()->to('/analisis')->with('error', 'Tidak ada data pelanggan untuk dianalisis.');
-        }
-        return redirect()->to('/analisis')->with('success', "RFM berhasil dihitung untuk {$result['count']} pelanggan.");
-    }
-
-    public function prosesSegmentasi()
+    public function prosesRFMCluster()
     {
         $timeoutSeconds = (int) (env('CLUSTERING_TIMEOUT', 300));
 
@@ -48,21 +39,73 @@ class AnalisisController extends BaseController
         @set_time_limit(0);
         @ignore_user_abort(true);
 
+        $this->writeProgress(5, 'rfm', 'Menghitung Recency, Frequency, Monetary...');
+
+        $rfmResult = $this->rfm->hitungRFM();
+        if (($rfmResult['status'] ?? '') === 'empty') {
+            $this->writeProgress(100, 'error', 'Tidak ada data pelanggan untuk dianalisis.');
+            return redirect()->to('/analisis')->with('error', 'Tidak ada data pelanggan untuk dianalisis.');
+        }
+
+        $rfmCount = (int) ($rfmResult['count'] ?? 0);
+        $this->writeProgress(30, 'rfm', "RFM selesai dihitung untuk {$rfmCount} pelanggan.");
+
+        $this->writeProgress(35, 'clustering', 'Mengekspor data ke CSV...');
+        $clusterResult = $this->runClustering($timeoutSeconds);
+
+        if (! empty($clusterResult['error'])) {
+            $this->writeProgress(100, 'error', $clusterResult['error']);
+            return redirect()->to('/analisis')->with('error', $clusterResult['error']);
+        }
+
+        $segCount = (int) ($clusterResult['count'] ?? 0);
+        $this->writeProgress(100, 'done', 'Proses selesai.');
+
+        return redirect()->to('/analisis')->with(
+            'success',
+            "RFM dihitung untuk {$rfmCount} pelanggan dan segmentasi berhasil untuk {$segCount} pelanggan."
+        );
+    }
+
+    public function progress()
+    {
+        return $this->response->setJSON($this->readProgress());
+    }
+
+    private function runClustering(int $timeoutSeconds): array
+    {
         $writable = WRITEPATH . 'uploads';
         if (! is_dir($writable)) {
-            mkdir($writable, 0755, true);
+            @mkdir($writable, 0755, true);
         }
         $in  = $writable . DIRECTORY_SEPARATOR . 'rfm_input.csv';
         $out = $writable . DIRECTORY_SEPARATOR . 'rfm_output.csv';
 
-        $this->rfm->exportToCSV($in);
+        $this->logClustering("=== Mulai runClustering (timeout={$timeoutSeconds}s) ===");
+        $this->logClustering("Path input  : {$in}");
+        $this->logClustering("Path output : {$out}");
+
+        $exported = $this->rfm->exportToCSV($in);
+        if (! $exported || ! is_file($in)) {
+            $this->logClustering("ERROR: export CSV gagal. exported=" . var_export($exported, true) . ", exists=" . var_export(is_file($in), true));
+            $logPath = $this->getClusteringLogPath();
+            return [
+                'error' => "Gagal mengekspor data RFM ke CSV. Cek log: {$logPath}",
+            ];
+        }
+        $this->logClustering("Export OK. Ukuran: " . filesize($in) . " bytes");
+        $this->writeProgress(50, 'clustering', 'Data diekspor. Menjalankan Python hierarchical clustering...');
 
         $python = $this->findPython();
         $script = ROOTPATH . 'app' . DIRECTORY_SEPARATOR . 'Libraries' . DIRECTORY_SEPARATOR . 'clustering.py';
 
+        $this->logClustering("Python: " . ($python ?: 'TIDAK DITEMUKAN'));
+        $this->logClustering("Script: {$script} (exists=" . var_export(file_exists($script), true) . ')');
+
         if (! $python || ! file_exists($script)) {
             @unlink($in);
-            return redirect()->to('/analisis')->with('error', 'Python atau script clustering tidak ditemukan.');
+            $this->logClustering("ERROR: Python atau script tidak ditemukan");
+            return ['error' => 'Python atau script clustering tidak ditemukan.'];
         }
 
         $cmd = escapeshellarg($python)
@@ -73,29 +116,94 @@ class AnalisisController extends BaseController
             . ' ' . escapeshellarg((string) $timeoutSeconds)
             . ' 2>&1';
 
+        $this->logClustering("Command: {$cmd}");
         $result = $this->runWithTimeout($cmd, $timeoutSeconds);
         $output = $result['output'];
+        $this->logClustering("Python output (" . strlen($output) . " chars):\n" . $output);
+        $this->logClustering("Timed out: " . var_export($result['timed_out'], true));
 
         if ($result['timed_out']) {
             @unlink($in);
             @unlink($out);
-            return redirect()->to('/analisis')->with(
-                'error',
-                "Clustering memakan waktu lebih dari {$timeoutSeconds} detik dan dihentikan otomatis. Coba perkecil dataset atau naikkan CLUSTERING_TIMEOUT di .env."
-            );
+            $this->logClustering("ERROR: clustering timeout");
+            return [
+                'error' => "Clustering memakan waktu lebih dari {$timeoutSeconds} detik dan dihentikan otomatis. Coba perkecil dataset atau naikkan CLUSTERING_TIMEOUT di .env.",
+            ];
         }
 
         if (! file_exists($out)) {
             @unlink($in);
-            return redirect()->to('/analisis')->with('error', 'Gagal menjalankan clustering. Output: ' . $output);
+            $this->logClustering("ERROR: output file tidak dibuat oleh Python");
+            $logPath = $this->getClusteringLogPath();
+            $snippet = trim($output) !== '' ? substr($output, 0, 500) : '(kosong)';
+            return [
+                'error' => "Gagal menjalankan clustering. Output Python: {$snippet}. Log lengkap: {$logPath}",
+            ];
         }
+        $this->logClustering("Output file OK. Ukuran: " . filesize($out) . " bytes");
 
+        $this->writeProgress(85, 'clustering', 'Mengimpor hasil segmentasi...');
         $count = $this->rfm->importSegmentResults($out);
+        $this->logClustering("Import selesai. count={$count}");
 
         @unlink($in);
         @unlink($out);
 
-        return redirect()->to('/analisis')->with('success', "Segmentasi berhasil untuk {$count} pelanggan.");
+        $this->writeProgress(95, 'clustering', "Berhasil mensegmentasi {$count} pelanggan.");
+
+        return ['count' => $count];
+    }
+
+    private function logClustering(string $message): void
+    {
+        $logDir = WRITEPATH . 'logs';
+        if (! is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
+        @file_put_contents($this->getClusteringLogPath(), $line, FILE_APPEND | LOCK_EX);
+        log_message('info', $message);
+    }
+
+    private function getClusteringLogPath(): string
+    {
+        return WRITEPATH . 'logs' . DIRECTORY_SEPARATOR . 'clustering_debug-' . date('Y-m-d') . '.log';
+    }
+
+    private function writeProgress(int $percent, string $stage, string $detail): void
+    {
+        $writable = WRITEPATH . 'uploads';
+        if (! is_dir($writable)) {
+            @mkdir($writable, 0755, true);
+        }
+        $payload = [
+            'percent' => max(0, min(100, $percent)),
+            'stage'   => $stage,
+            'detail'  => $detail,
+            'time'    => time(),
+        ];
+        @file_put_contents(
+            $writable . DIRECTORY_SEPARATOR . 'clustering_progress.json',
+            json_encode($payload, JSON_UNESCAPED_UNICODE)
+        );
+    }
+
+    private function readProgress(): array
+    {
+        $file = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'clustering_progress.json';
+        if (! is_file($file)) {
+            return ['percent' => 0, 'stage' => 'idle', 'detail' => ''];
+        }
+        $raw = @file_get_contents($file);
+        $data = json_decode((string) $raw, true);
+        if (! is_array($data)) {
+            return ['percent' => 0, 'stage' => 'idle', 'detail' => ''];
+        }
+        return [
+            'percent' => (int) ($data['percent'] ?? 0),
+            'stage'   => (string) ($data['stage'] ?? 'idle'),
+            'detail'  => (string) ($data['detail'] ?? ''),
+        ];
     }
 
     private function runWithTimeout(string $cmd, int $timeoutSeconds): array
@@ -163,11 +271,31 @@ class AnalisisController extends BaseController
     {
         $candidates = ['python', 'python3', 'py'];
         foreach ($candidates as $cmd) {
-            $path = trim(shell_exec("where $cmd 2>nul") ?? '');
-            if (! empty($path)) {
-                return $path;
+            $raw = trim((string) shell_exec("where $cmd 2>nul"));
+            if ($raw === '') {
+                continue;
+            }
+            $lines = preg_split('/\r\n|\r|\n/', $raw);
+            $first = trim((string) ($lines[0] ?? ''));
+            if ($first !== '') {
+                return $first;
             }
         }
         return null;
+    }
+
+    private function terminateProcess($proc, array $pipes): void
+    {
+        if (is_resource($proc)) {
+            @proc_terminate($proc, 9);
+        }
+        foreach ($pipes as $p) {
+            if (is_resource($p)) {
+                @fclose($p);
+            }
+        }
+        if (is_resource($proc)) {
+            @proc_close($proc);
+        }
     }
 }

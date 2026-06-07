@@ -43,35 +43,45 @@
 
 <div class="card">
     <div class="card-header">
-        <h2><i class="bi bi-cpu"></i> Tahapan Segmentasi</h2>
+        <h2><i class="bi bi-cpu"></i> Lakukan Segmentasi</h2>
     </div>
     <div class="action-buttons" id="actionButtons">
-        <form action="<?= base_url() ?>analisis/proses-rfm" method="post" style="display:inline" class="js-long-form">
+        <form action="<?= base_url() ?>analisis/proses-rfm-cluster" method="post" style="display:inline" class="js-long-form">
             <?= csrf_field() ?>
             <button type="submit" class="btn btn-primary">
-                <i class="bi bi-calculator"></i> 1. Hitung Nilai RFM
-            </button>
-        </form>
-        <form action="<?= base_url() ?>analisis/proses-segmentasi" method="post" style="display:inline" class="js-long-form">
-            <?= csrf_field() ?>
-            <button type="submit" class="btn btn-success">
-                <i class="bi bi-diagram-3"></i> 2. Proses Hierarchical Clustering
+                <i class="bi bi-cpu"></i> Mulai Proses
             </button>
         </form>
     </div>
+    <dialog id="confirmModal" class="confirm-modal" aria-labelledby="confirmModalTitle">
+        <div class="confirm-modal-form">
+            <div class="confirm-modal-icon"><i class="bi bi-cpu"></i></div>
+            <h3 id="confirmModalTitle" class="confirm-modal-title">Konfirmasi Proses</h3>
+            <p class="confirm-modal-body">
+                Proses segmentasi pelanggan dapat memakan waktu beberapa menit.
+                Anda tetap dapat berpindah menu &mdash; proses akan tetap berjalan hingga selesai.
+            </p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-secondary" data-action="cancel">Batal</button>
+                <button type="button" class="btn btn-primary" data-action="confirm">Ya, Mulai Proses</button>
+            </div>
+        </div>
+    </dialog>
     <div id="clusteringStatus" class="clustering-status" hidden>
         <div class="clustering-spinner">
             <div class="spinner" aria-hidden="true"></div>
             <div class="clustering-status-text">
                 <strong id="clusteringTitle">Sedang memproses...</strong>
+                <div class="progress-bar-wrap" aria-hidden="true">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
                 <small id="clusteringDetail">Mohon jangan tutup halaman ini. Anda boleh berpindah menu, proses tetap berjalan di server.</small>
             </div>
         </div>
     </div>
     <p class="hint">
         <i class="bi bi-info-circle"></i>
-        Langkah 1: Menghitung Recency, Frequency, Monetary dari data transaksi (dengan normalisasi Min-Max).<br>
-        Langkah 2: Menjalankan Agglomerative Hierarchical Clustering (Ward Linkage, Euclidean) dengan k = 5 cluster.
+        Tombol di atas akan menghitung recency (jumlah hari sejak terakhir kali pelanggan melakukan transaksi), frequency (jumlah transaksi), dan monetary (total nilai transaksi dalam bentuk rupiah). Setelah itu, akan dilakukan proses segmentasi menggunakan metode hierarchical clustering untuk mengelompokkan pelanggan ke dalam segmen-segmen seperti Loyal, Potential, Budget Hunter, Seasonal, dan At Risk berdasarkan nilai tersebut yang akan memakan waktu beberapa menit.
     </p>
 </div>
 
@@ -101,7 +111,7 @@
                     'at_risk'   => '<span class="badge badge-risk">At Risk</span>',
                 ];
                 $no = 1;
-                foreach ($rfm as $r): ?>
+                foreach ($rfm ?? [] as $r): ?>
                     <tr>
                         <td><?= $no++ ?></td>
                         <td><?= esc($r['nama_pelanggan']) ?></td>
@@ -113,7 +123,7 @@
                 <?php endforeach; ?>
                 <?php if (empty($rfm)): ?>
                     <tr>
-                        <td colspan="6" class="text-center">Belum ada data. Klik "Hitung Nilai RFM" terlebih dahulu.</td>
+                        <td colspan="6" class="text-center">Belum ada data. Klik "Hitung RFM & Clustering" terlebih dahulu.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
@@ -130,7 +140,11 @@
         var statusBox = document.getElementById('clusteringStatus');
         var statusTitle = document.getElementById('clusteringTitle');
         var statusDetail = document.getElementById('clusteringDetail');
+        var progressBar = document.getElementById('progressBarFill');
         var actionButtons = document.getElementById('actionButtons');
+        var progressUrl = '<?= base_url() ?>analisis/progress';
+        var confirmModal = document.getElementById('confirmModal');
+        var pendingForm = null;
 
         function getCsrfMeta() {
             var meta = document.querySelector('meta[name="csrf-token"]');
@@ -145,15 +159,14 @@
             return '<?= csrf_header() ?>';
         }
 
-        function showStatus(title, detail) {
+        function showStatus(title, detail, percent) {
             if (!statusBox) return;
             if (title) statusTitle.textContent = title;
-            if (detail) statusDetail.textContent = detail;
+            if (detail !== undefined && detail !== null) statusDetail.textContent = detail;
+            if (typeof percent === 'number' && progressBar) {
+                progressBar.style.width = Math.max(0, Math.min(100, percent)) + '%';
+            }
             statusBox.hidden = false;
-        }
-
-        function hideStatus() {
-            if (statusBox) statusBox.hidden = true;
         }
 
         function setButtonsDisabled(disabled) {
@@ -163,60 +176,129 @@
             });
         }
 
+        function openConfirm() {
+            if (confirmModal && typeof confirmModal.showModal === 'function') {
+                confirmModal.showModal();
+            } else if (confirmModal) {
+                confirmModal.setAttribute('open', '');
+            }
+        }
+
+        function closeConfirm() {
+            if (confirmModal) {
+                if (typeof confirmModal.close === 'function') {
+                    confirmModal.close();
+                } else {
+                    confirmModal.open = false;
+                    confirmModal.removeAttribute('open');
+                }
+            }
+            pendingForm = null;
+        }
+
+        if (confirmModal) {
+            confirmModal.addEventListener('click', function(e) {
+                if (e.target === confirmModal) closeConfirm();
+            });
+            confirmModal.addEventListener('close', function() {
+                pendingForm = null;
+            });
+            var cancelBtn = confirmModal.querySelector('[data-action="cancel"]');
+            var confirmBtn = confirmModal.querySelector('[data-action="confirm"]');
+            if (cancelBtn) cancelBtn.addEventListener('click', closeConfirm);
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function() {
+                    var f = pendingForm;
+                    closeConfirm();
+                    if (f) executeProcess(f);
+                });
+            }
+        }
+
+        function executeProcess(form) {
+            showStatus(
+                'Mempersiapkan proses...',
+                'Menghitung nilai RFM lalu menjalankan hierarchical clustering. Halaman akan dimuat ulang otomatis ketika selesai.',
+                0
+            );
+            setButtonsDisabled(true);
+
+            var formData = new FormData(form);
+            var csrfValue = getCsrfMeta();
+
+            var pollTimer = setInterval(function() {
+                fetch(progressUrl, {
+                        credentials: 'same-origin',
+                        cache: 'no-store'
+                    })
+                    .then(function(r) {
+                        return r.ok ? r.json() : null;
+                    })
+                    .then(function(p) {
+                        if (!p) return;
+                        var percent = parseInt(p.percent, 10) || 0;
+                        var stage = p.stage || '';
+                        var detail = p.detail || '';
+
+                        var title = (stage === 'rfm') ? 'Menghitung nilai RFM...' :
+                            (stage === 'clustering') ? 'Menjalankan Hierarchical Clustering...' :
+                            (stage === 'done') ? 'Selesai' :
+                            (stage === 'error') ? 'Gagal' :
+                            'Sedang memproses...';
+
+                        showStatus(title, detail, percent);
+
+                        if (percent >= 100) {
+                            clearInterval(pollTimer);
+                        }
+                    })
+                    .catch(function() {
+                        /* abaikan error polling, request utama masih jalan */
+                    });
+            }, 800);
+
+            fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: csrfValue ? (function() {
+                        var h = {};
+                        h[getCsrfHeader()] = csrfValue;
+                        return h;
+                    })() : {},
+                })
+                .then(function(res) {
+                    if (res.redirected) {
+                        clearInterval(pollTimer);
+                        window.location.href = res.url;
+                        return null;
+                    }
+                    if (res.ok) {
+                        clearInterval(pollTimer);
+                        showStatus('Selesai', 'Memuat ulang halaman...', 100);
+                        window.location.reload();
+                        return null;
+                    }
+                    return res.text().then(function(text) {
+                        clearInterval(pollTimer);
+                        var snippet = (text || 'Respons tidak dikenal').replace(/\s+/g, ' ').substring(0, 300);
+                        showStatus('Gagal (' + res.status + ')', snippet, 100);
+                        setButtonsDisabled(false);
+                    });
+                })
+                .catch(function(err) {
+                    clearInterval(pollTimer);
+                    showStatus('Gagal memproses', err && err.message ? err.message : 'Terjadi kesalahan jaringan.', 100);
+                    setButtonsDisabled(false);
+                });
+        }
+
         document.querySelectorAll('form.js-long-form').forEach(function(form) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-
-                var submitter = form.querySelector('button[type="submit"]');
-                var label = submitter ? submitter.textContent.trim() : 'Proses';
-                var isClustering = /clustering/i.test(form.action) || /clustering/i.test(label);
-
-                if (isClustering) {
-                    if (!confirm('Proses hierarchical clustering dapat memakan waktu beberapa menit. Lanjutkan?')) {
-                        return;
-                    }
-                    showStatus(
-                        'Memulai hierarchical clustering...',
-                        'Menjalankan Python + scipy. Anda boleh pindah menu; proses tetap berjalan. Halaman akan dimuat ulang otomatis ketika selesai.'
-                    );
-                } else {
-                    showStatus('Menghitung nilai RFM...', 'Mengambil data transaksi dan menghitung Recency, Frequency, Monetary.');
-                }
-
-                setButtonsDisabled(true);
-
-                var formData = new FormData(form);
-                var csrfValue = getCsrfMeta();
-
-                fetch(form.action, {
-                        method: 'POST',
-                        body: formData,
-                        credentials: 'same-origin',
-                        headers: csrfValue ? (function() {
-                            var h = {};
-                            h[getCsrfHeader()] = csrfValue;
-                            return h;
-                        })() : {},
-                    })
-                    .then(function(res) {
-                        if (res.redirected) {
-                            window.location.href = res.url;
-                            return null;
-                        }
-                        if (res.ok) {
-                            window.location.reload();
-                            return null;
-                        }
-                        return res.text().then(function(text) {
-                            var snippet = (text || 'Respons tidak dikenal').replace(/\s+/g, ' ').substring(0, 300);
-                            showStatus('Gagal (' + res.status + ')', snippet);
-                            setButtonsDisabled(false);
-                        });
-                    })
-                    .catch(function(err) {
-                        showStatus('Gagal memproses', err && err.message ? err.message : 'Terjadi kesalahan jaringan.');
-                        setButtonsDisabled(false);
-                    });
+                pendingForm = form;
+                openConfirm();
             });
         });
     })();

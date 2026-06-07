@@ -34,6 +34,9 @@
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-megaphone"></i> Kirim Promosi</h2>
+        <a href="<?= base_url() ?>promosi/riwayat" class="btn btn-secondary">
+            <i class="bi bi-clock-history"></i> Riwayat
+        </a>
     </div>
     <form action="<?= base_url() ?>promosi/kirim" method="post" id="formPromosi">
         <?= csrf_field() ?>
@@ -41,15 +44,21 @@
             <div class="form-group">
                 <label for="channel">Kanal Pengiriman *</label>
                 <select id="channel" name="channel" required>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="email">Email</option>
+                    <option value="email" selected>Email</option>
+                    <option value="whatsapp" disabled>WhatsApp (segera)</option>
                 </select>
             </div>
         </div>
         <div class="form-group">
+            <label for="subject">Subjek Email *</label>
+            <input type="text" id="subject" name="subject" required maxlength="255"
+                   value="<?= old('subject') ?>"
+                   placeholder="cth: Diskon 25% Akhir Bulan untuk Anda">
+        </div>
+        <div class="form-group">
             <label for="pesan">Pesan Promosi *</label>
             <textarea id="pesan" name="pesan" rows="5" required placeholder="Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen}..."><?= old('pesan') ?: "Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen} di PT. Maestro Wisata Raya. Hubungi kami sekarang juga!" ?></textarea>
-            <small class="hint">Gunakan <code>{nama}</code> dan <code>{segmen}</code> untuk personalisasi otomatis.</small>
+            <small class="hint">Gunakan <code>{nama}</code> (nama lengkap) dan <code>{segmen}</code> untuk personalisasi otomatis.</small>
         </div>
 
         <h3>Daftar Pelanggan</h3>
@@ -94,10 +103,25 @@
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">
-                <i class="bi bi-send"></i> Buat Tautan Promosi
+                <i class="bi bi-send"></i> Kirim Promosi
             </button>
         </div>
     </form>
+
+    <dialog id="confirmModal" class="confirm-modal" aria-labelledby="confirmModalTitle">
+        <div class="confirm-modal-form">
+            <div class="confirm-modal-icon"><i class="bi bi-megaphone"></i></div>
+            <h3 id="confirmModalTitle" class="confirm-modal-title">Konfirmasi Pengiriman</h3>
+            <p class="confirm-modal-body">
+                Anda akan mengirim email promosi ke <strong id="confirmCount">0</strong> pelanggan.
+                Proses ini akan langsung mengirim dan tidak dapat dibatalkan.
+            </p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-secondary" data-action="cancel">Batal</button>
+                <button type="button" class="btn btn-primary" data-action="confirm">Ya, Kirim Sekarang</button>
+            </div>
+        </div>
+    </dialog>
 </div>
 <?= $this->endSection() ?>
 
@@ -106,5 +130,39 @@
 document.getElementById('checkAll')?.addEventListener('change', function(e) {
     document.querySelectorAll('.chk-pelanggan').forEach(cb => cb.checked = e.target.checked);
 });
+
+(function() {
+    const form = document.getElementById('formPromosi');
+    const modal = document.getElementById('confirmModal');
+    if (!form || !modal) return;
+
+    const countEl = document.getElementById('confirmCount');
+
+    form.addEventListener('submit', function(e) {
+        const checked = form.querySelectorAll('.chk-pelanggan:checked').length;
+        if (checked === 0) {
+            e.preventDefault();
+            alert('Pilih minimal satu pelanggan.');
+            return;
+        }
+        e.preventDefault();
+        countEl.textContent = checked;
+        modal.showModal();
+    });
+
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.close();
+            return;
+        }
+        const action = e.target.dataset.action;
+        if (action === 'cancel') {
+            modal.close();
+        } else if (action === 'confirm') {
+            modal.close();
+            form.submit();
+        }
+    });
+})();
 </script>
 <?= $this->endSection() ?>
