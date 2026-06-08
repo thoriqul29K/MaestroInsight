@@ -1,3 +1,9 @@
+<?php
+$request = service('request');
+$_page = (int) ($request->getGet('page') ?: 1);
+$startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
+?>
+
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('main') ?>
@@ -46,14 +52,11 @@
         <h2><i class="bi bi-clock-history"></i> Riwayat Pengiriman Promosi</h2>
         <?php if (! empty($logs)): ?>
             <div class="page-actions" style="display: flex; gap: 8px; align-items: center;">
-                <small class="hint">Maks. 50 entri terbaru</small>
                 <button type="button" class="btn btn-danger" id="btnHapusSelected"
                     style="background: var(--danger, #dc2626); color: #fff; border: none;">
                     <i class="bi bi-trash"></i> Hapus yang Dipilih
                 </button>
             </div>
-        <?php else: ?>
-            <small class="hint">Maks. 50 entri terbaru</small>
         <?php endif; ?>
     </div>
 
@@ -66,6 +69,25 @@
             </a>
         </div>
     <?php else: ?>
+        <div class="table-toolbar">
+            <div class="per-page-selector">
+                <label>Baris per halaman:</label>
+                <select onchange="location.href='?'+this.value+'&status=<?= $filterStatus ?>&channel=<?= $filterChannel ?>'"
+                        class="form-select per-page-select">
+                    <option value="per_page=25"  <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
+                    <option value="per_page=50"  <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
+                    <option value="per_page=100" <?= $perPage == 100 ? 'selected' : '' ?>>100</option>
+                    <option value="per_page=200" <?= $perPage == 200 ? 'selected' : '' ?>>200</option>
+                    <option value="per_page=500" <?= $perPage == 500 ? 'selected' : '' ?>>500</option>
+                    <option value="per_page=all" <?= $perPage == 'all' ? 'selected' : '' ?>>Semua</option>
+                </select>
+            </div>
+            <?php if ($perPage !== 'all' && $pager): ?>
+                <div class="pagination-info">
+                    Menampilkan <?= $startNum ?>–<?= min($startNum + count($logs) - 1, $pager->getTotal()) ?> dari <?= $pager->getTotal() ?>
+                </div>
+            <?php endif; ?>
+        </div>
         <form method="post" action="<?= base_url() ?>promosi/riwayat/hapus" id="formHapusSelected">
             <?= csrf_field() ?>
             <input type="hidden" name="mode" value="selected">
@@ -88,7 +110,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php $no = 1;
+                        <?php $no = $startNum;
                         foreach ($logs as $log): ?>
                             <tr>
                                 <td><input type="checkbox" name="id_log[]" value="<?= $log['id'] ?>" class="chk-log" aria-label="Pilih baris <?= $no ?>"></td>
@@ -127,6 +149,12 @@
                 </table>
             </div>
         </form>
+
+        <?php if ($perPage !== 'all' && $pager): ?>
+            <div class="pagination-wrapper">
+                <?= $pager->links('default', 'default_full') ?>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 

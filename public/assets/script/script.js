@@ -21,7 +21,42 @@
 
         // Resizable columns with localStorage persistence
         initResizableTables();
+
+        // Mobile sidebar drawer
+        initSidebarDrawer();
     });
+
+    function initSidebarDrawer() {
+        var btn = document.getElementById('hamburgerBtn');
+        var drawer = document.getElementById('sidebarDrawer');
+        var overlay = document.getElementById('sidebarOverlay');
+        var closeBtn = document.getElementById('drawerClose');
+        if (!btn || !drawer || !overlay) return;
+
+        function open() {
+            drawer.classList.add('open');
+            overlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function close() {
+            drawer.classList.remove('open');
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        btn.addEventListener('click', open);
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        overlay.addEventListener('click', close);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && drawer.classList.contains('open')) close();
+        });
+
+        drawer.querySelectorAll('.drawer-nav a').forEach(function (link) {
+            link.addEventListener('click', close);
+        });
+    }
 
     function initResizableTables() {
         var tables = document.querySelectorAll('.data-table');

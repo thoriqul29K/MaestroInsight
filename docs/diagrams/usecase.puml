@@ -1,0 +1,88 @@
+@startuml MaestroInsight - Use Case Diagram
+!theme plain
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecaseBorderColor black
+skinparam usecaseArrowColor black
+skinparam actorBorderColor black
+skinparam actorStyle awesome
+
+title **Use Case Diagram — MaestroInsight**
+caption CRM PT. Maestro Wisata Raya — Single Admin Role
+
+' ============================================================
+' ACTORS
+' ============================================================
+actor Admin as adm
+actor "Python\nClustering Engine" as py #A9D18E
+actor "Gmail\nSMTP" as smtp #8DB4E2
+
+' ============================================================
+' USE CASES
+' ============================================================
+rectangle "Sistem MaestroInsight" {
+  usecase "Login" as UC1
+  usecase "Logout" as UC2
+  usecase "Melihat Dashboard" as UC3
+
+  usecase "Mengelola\nPelanggan" as UC4
+  usecase "Lihat Pelanggan" as UC4a
+  usecase "Tambah Pelanggan" as UC4b
+  usecase "Ubah Pelanggan" as UC4c
+  usecase "Hapus Pelanggan" as UC4d
+
+  usecase "Mengelola\nTransaksi" as UC5
+  usecase "Lihat Transaksi" as UC5a
+  usecase "Tambah Transaksi" as UC5b
+  usecase "Ubah Transaksi" as UC5c
+  usecase "Hapus Transaksi" as UC5d
+
+  usecase "Melihat Data RFM" as UC6
+  usecase "Memproses\nSegmentasi RFM" as UC7
+  usecase "Melihat Progress\nSegmentasi" as UC8
+  usecase "Mengirim Promosi\nvia Email" as UC9
+  usecase "Melihat Riwayat\nPromosi" as UC10
+  usecase "Menghapus Riwayat\nPromosi" as UC11
+
+  usecase "Validasi\nKredensial" as UC12
+}
+
+' ============================================================
+' RELATIONSHIPS — ACTOR TO USE CASE
+' ============================================================
+adm --> UC1
+adm --> UC2
+adm --> UC3
+adm --> UC4
+adm --> UC5
+adm --> UC6
+adm --> UC7
+adm --> UC8
+adm --> UC9
+adm --> UC10
+adm --> UC11
+
+' ============================================================
+' RELATIONSHIPS — INCLUDE / EXTEND
+' ============================================================
+UC4 <.. UC4a : <<include>>
+UC4 <.. UC4b : <<include>>
+UC4 <.. UC4c : <<include>>
+UC4 <.. UC4d : <<include>>
+
+UC5 <.. UC5a : <<include>>
+UC5 <.. UC5b : <<include>>
+UC5 <.. UC5c : <<include>>
+UC5 <.. UC5d : <<include>>
+
+UC7 ..> UC8 : <<include>>
+UC1 ..> UC12 : <<include>>
+UC7 ..> UC6 : <<extend>>
+
+' ============================================================
+' SECONDARY ACTORS
+' ============================================================
+UC7 --> py : shell_exec
+UC9 --> smtp : SMTP
+
+@enduml

@@ -116,18 +116,40 @@ class PromosiController extends BaseController
     {
         $status  = $this->request->getGet('status');
         $channel = $this->request->getGet('channel');
+        $perPage = $this->request->getGet('per_page');
 
         $hasFilter = ($status !== null && $status !== '') || ($channel !== null && $channel !== '');
+
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        if (is_numeric($perPage)) {
+            $perPage = (int) $perPage;
+        }
+        $perPage = in_array($perPage, $allowedPerPage, true) ? $perPage : 50;
+
+        if ($perPage === 'all') {
+            $logs  = $this->logModel->getFiltered(null, $status, $channel);
+            $pager = null;
+        } else {
+            $page  = max((int) ($this->request->getGet('page') ?: 1), 1);
+            $total = $this->logModel->countFiltered($status, $channel);
+            $logs  = $this->logModel->getFiltered((int) $perPage, $status, $channel, ($page - 1) * (int) $perPage);
+
+            $pager = service('pager');
+            $pager->store('default', $page, (int) $perPage, $total, 0);
+            $pager->only(['status', 'channel', 'per_page']);
+        }
 
         $data = [
             'title'         => 'Riwayat Promosi',
             'pageTitle'     => 'Riwayat Promosi',
             'pageIcon'      => 'bi-clock-history',
-            'logs'          => $this->logModel->getFiltered(50, $status, $channel),
+            'logs'          => $logs,
             'filterStatus'  => $status ?? '',
             'filterChannel' => $channel ?? '',
             'hasFilter'     => $hasFilter,
             'filterCount'   => $hasFilter ? $this->logModel->countFiltered($status, $channel) : 0,
+            'pager'         => $pager,
+            'perPage'       => $perPage,
         ];
         return view('pages/promosi/riwayat', $data);
     }

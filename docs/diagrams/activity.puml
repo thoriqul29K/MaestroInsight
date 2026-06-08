@@ -1,0 +1,145 @@
+@startuml MaestroInsight - Activity Diagrams
+!theme plain
+skinparam activityBorderColor black
+skinparam activityBackgroundColor white
+skinparam arrowColor black
+
+title **Activity Diagram — MaestroInsight**
+
+' ============================================================
+' DIAGRAM 1: LOGIN
+' ============================================================
+left header **Login**
+start
+:Admin membuka /login;
+:Menampilkan form login;
+:Input username & password;
+:POST ke doLogin();
+:UserModel::findByUsername();
+if (Username ditemukan?) then (ya)
+  :password_verify();
+  if (Password valid?) then (ya)
+    :Set session (isLoggedIn, user_id,\nusername, nama_lengkap, role);
+    :Redirect ke /dashboard;
+    stop
+  else (tidak)
+  endif
+else (tidak)
+endif
+:Set flashdata error;
+:Redirect ke /login;
+stop
+
+' ============================================================
+' DIAGRAM 2: SEGMENTASI RFM
+' ============================================================
+left header **Segmentasi RFM Clustering**
+start
+:Admin klik "Proses Segmentasi";
+:writeProgress(0%, "mulai");
+:RfmService::hitungRFM();
+:Query tb_pelanggan LEFT JOIN tb_transaksi;
+:Hitung recency, frequency, monetary;
+:Min-max normalization;
+:Truncate tb_rfm;
+:Insert ke tb_rfm;
+if (Data kosong?) then (ya)
+  :Redirect error "Tidak ada data";
+  stop
+else (tidak)
+endif
+
+:writeProgress(30%, "export");
+:RfmService::exportToCSV(rfm_input.csv);
+while (Find Python interpreter) is (try)
+  :where python / where python3 / where py;
+endwhile (found?)
+if (Python tidak ditemukan?) then (ya)
+  :Redirect error "Python not found";
+  stop
+else (tidak)
+endif
+
+:writeProgress(50%, "cluster");
+:runWithTimeout("python clustering.py\n rfm_input.csv rfm_output.csv");
+
+fork
+  :Python pipeline:
+  :Load CSV;
+  :MinMaxScaler normalize
+   (recency, frequency, monetary);
+  :Ward linkage (Euclidean);
+  :fcluster(maxclust=5);
+  :Rank cluster means
+   (by monetary value);
+  :Label segments:
+   Loyal > Potential > Seasonal
+   > Budget Hunter > At Risk;
+  :Write rfm_output.csv;
+fork again
+  :Polling progress:
+   GET /analisis/progress
+   setiap 2 detik;
+  :Read clustering_progress.json;
+  :Return JSON {percent,
+   stage, detail};
+end fork
+
+if (Timeout 300s?) then (ya)
+  :terminateProcess();
+  :Redirect error "Timeout";
+  stop
+else (tidak)
+endif
+
+:writeProgress(90%, "import");
+:RfmService::importSegmentResults(rfm_output.csv);
+:UPDATE tb_pelanggan.segment;
+:writeProgress(100%, "selesai");
+:Redirect success "Segmentasi berhasil";
+stop
+
+' ============================================================
+' DIAGRAM 3: KIRIM PROMOSI
+' ============================================================
+left header **Kirim Promosi Email**
+start
+:Admin buka /promosi;
+:PelangganModel::getAllWithSegment();
+:Menampilkan form promosi;
+:Pilih pelanggan (checkbox\n+ filter segmen);
+:Input subject, pesan
+ ({nama} {segmen});
+:Upload gambar (opsional);
+:POST /promosi/kirim;
+if (Validasi gagal?) then (ya)
+  :Tampilkan error validasi;
+  stop
+else (tidak)
+endif
+:Filter pelanggan yang
+ memiliki email;
+while (Untuk setiap pelanggan) is (loop)
+  :personalize(pesan);
+  :PromosiSender::send("email",
+   pelanggan, subject, body);
+  :EmailChannel::send();
+  :service("email")->setFrom()
+   ->setTo()->setSubject()
+   ->setMessage();
+  if (Ada attachment?) then (ya)
+    :service("email")->attach();
+  endif
+  :service("email")->send();
+  if (Sukses?) then (ya)
+    :Log status="success"
+     ke tb_promosi_log;
+  else (gagal)
+    :Log status="failed"\n+ error_message;
+  endif
+endwhile (selesai)
+:Redirect dengan summary
+"X berhasil, Y gagal";
+stop
+
+@enduml

@@ -49,8 +49,10 @@ php spark serve
 - `app/Libraries/clustering.py` is invoked by `AnalisisController::prosesRFMCluster` via `shell_exec`. Do not rename or move either without updating the other.
 - Required: `pip install pandas numpy scipy scikit-learn pymysql`. The interpreter (`python`/`python3`/`py`) must be on PATH — probed in that order by `findPython()`.
 - Flow: `RfmService::exportToCSV()` writes `writable/uploads/rfm_input.csv` → Python reads it, runs Ward linkage (Euclidean, 5 clusters), writes `writable/uploads/rfm_output.csv` → `importSegmentResults()` updates `tb_pelanggan.segment`.
+- **Segments (5)**: `Loyal`, `Potential`, `Budget Hunter`, `Seasonal`, `At Risk` — assigned by ranking cluster means on monetary value.
 - **Destructive**: `RfmService::hitungRFM()` does `$this->rfm->db->table('tb_rfm')->truncate()` then re-inserts. Don't call it during concurrent reads of `tb_rfm`. Not safe on production DB without backups.
 - 5-min timeout (`CLUSTERING_TIMEOUT` in `.env`, default 300s). Progress written to `writable/uploads/clustering_progress.json` (polled by GET `/analisis/progress`). Debug log at `writable/logs/clustering_debug-YYYY-MM-DD.log`.
+- `clustering.py` also supports a `--db` mode (reads directly from MySQL via `pymysql`); currently unused — PHP uses CSV round-trip.
 
 ## Promosi (email sender)
 
@@ -89,3 +91,4 @@ php spark serve
 - `.env` is gitignored; `env` (no dot) is the committed template — they diverge.
 - `encryption.key` in `.env` is a dev placeholder (must change for production).
 - No linters, formatters, static analysis, CI workflows, or pre-commit hooks.
+- `app/Config/WorkerMode.php` exists (purpose unclear — investigate if modifying background job behavior).

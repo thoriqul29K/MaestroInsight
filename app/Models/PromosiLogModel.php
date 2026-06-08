@@ -21,7 +21,7 @@ class PromosiLogModel extends Model
         'attachment_filename',
     ];
 
-    public function getFiltered(int $limit = 50, ?string $status = null, ?string $channel = null): array
+    public function getFiltered(?int $limit = 50, ?string $status = null, ?string $channel = null, ?int $offset = null): array
     {
         $builder = $this->orderBy('created_at', 'DESC');
 
@@ -33,7 +33,11 @@ class PromosiLogModel extends Model
             $builder->where('channel', $channel);
         }
 
-        return $builder->limit($limit)->findAll();
+        if ($limit !== null) {
+            $builder->limit($limit, $offset ?? 0);
+        }
+
+        return $builder->findAll();
     }
 
     public function countByStatus(?string $since = null): array
