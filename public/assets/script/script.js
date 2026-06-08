@@ -11,5 +11,12 @@
                 setTimeout(function () { el.remove(); }, 400);
             }, 5000);
         });
+
+        // Date pickers with dd/mm/yyyy display
+        flatpickr("#tanggal_lahir, #tanggal_transaksi", {
+            altInput: true,
+            altFormat: "d/m/Y",
+            dateFormat: "Y-m-d"
+        });
     });
 })();

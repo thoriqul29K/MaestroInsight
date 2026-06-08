@@ -1,5 +1,5 @@
     </main>
-    <footer class="app-footer">
+    <footer class="app-footer" style="justify-content: center;">
         <div>&copy; <?= date('Y') ?> PT. Maestro Wisata Raya &mdash; MaestroInsight CRM</div>
         <div></div>
     </footer>

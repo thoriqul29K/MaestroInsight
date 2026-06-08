@@ -13,6 +13,8 @@ $baseURL = base_url();
     <title><?= $title ?? 'MaestroInsight' ?> | PT. Maestro Wisata Raya</title>
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <link rel="icon" type="image/x-icon" href="<?= base_url('assets/img/favicon.ico') ?>">
 </head>
 

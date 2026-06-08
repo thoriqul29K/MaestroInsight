@@ -16,10 +16,46 @@ class PelangganController extends BaseController
 
     public function index()
     {
+        $sort  = $this->request->getGet('sort') ?? 'nama_pelanggan';
+        $order = $this->request->getGet('order') ?? 'ASC';
+        $perPage = $this->request->getGet('per_page');
+
+        $allowedSort = ['id', 'nama_pelanggan', 'email', 'telepon', 'agama', 'segment'];
+        $sort  = in_array($sort, $allowedSort, true) ? $sort : 'nama_pelanggan';
+        $order = strtoupper($order) === 'DESC' ? 'DESC' : 'ASC';
+
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        if (is_numeric($perPage)) {
+            $perPage = (int) $perPage;
+        }
+        $perPage = in_array($perPage, $allowedPerPage, true) ? $perPage : 100;
+
+        if ($perPage === 'all') {
+            $pelanggan = $this->model->orderBy($sort, $order)->findAll();
+            $pager = null;
+        } else {
+            $page = (int) ($this->request->getGet('page') ?: 1);
+            $page = max($page, 1);
+
+            $this->model->orderBy($sort, $order);
+            $total = $this->model->countAllResults(false);
+
+            $offset = ($page - 1) * (int) $perPage;
+            $pelanggan = $this->model->findAll((int) $perPage, $offset);
+
+            $pager = service('pager');
+            $pager->store('default', $page, (int) $perPage, $total, 0);
+            $pager->only(['sort', 'order', 'per_page']);
+        }
+
         $data = [
-            'title'      => 'Daftar Pelanggan',
-            'pageTitle'  => 'Manajemen Pelanggan',
-            'pelanggan'  => $this->model->orderBy('nama_pelanggan', 'ASC')->findAll(),
+            'title'     => 'Daftar Pelanggan',
+            'pageTitle' => 'Manajemen Pelanggan',
+            'pelanggan' => $pelanggan,
+            'pager'     => $pager,
+            'sort'      => $sort,
+            'order'     => $order,
+            'perPage'   => $perPage,
         ];
         return view('pages/pelanggan/index', $data);
     }
@@ -40,6 +76,8 @@ class PelangganController extends BaseController
             'nama_pelanggan' => 'required|min_length[3]',
             'email'          => 'required|valid_email',
             'telepon'        => 'required|min_length[8]',
+            'agama'          => 'required|in_list[Islam,Kristen,Katolik,Buddha,Hindu,Lainnya]',
+            'tanggal_lahir'  => 'required|valid_date',
         ];
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
@@ -50,6 +88,9 @@ class PelangganController extends BaseController
             'email'          => $this->request->getPost('email'),
             'telepon'        => $this->request->getPost('telepon'),
             'alamat'         => $this->request->getPost('alamat'),
+            'agama'          => $this->request->getPost('agama'),
+            'tanggal_lahir'  => $this->request->getPost('tanggal_lahir'),
+            'profesi'        => $this->request->getPost('profesi'),
         ]);
 
         return redirect()->to('/pelanggan')->with('success', 'Pelanggan berhasil ditambahkan.');
@@ -75,6 +116,8 @@ class PelangganController extends BaseController
             'nama_pelanggan' => 'required|min_length[3]',
             'email'          => 'required|valid_email',
             'telepon'        => 'required|min_length[8]',
+            'agama'          => 'required|in_list[Islam,Kristen,Katolik,Buddha,Hindu,Lainnya]',
+            'tanggal_lahir'  => 'required|valid_date',
         ];
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
@@ -85,6 +128,9 @@ class PelangganController extends BaseController
             'email'          => $this->request->getPost('email'),
             'telepon'        => $this->request->getPost('telepon'),
             'alamat'         => $this->request->getPost('alamat'),
+            'agama'          => $this->request->getPost('agama'),
+            'tanggal_lahir'  => $this->request->getPost('tanggal_lahir'),
+            'profesi'        => $this->request->getPost('profesi'),
         ]);
 
         return redirect()->to('/pelanggan')->with('success', 'Data pelanggan diperbarui.');

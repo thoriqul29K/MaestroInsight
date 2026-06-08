@@ -21,11 +21,65 @@ class AnalisisController extends BaseController
 
     public function index()
     {
+        $sort    = $this->request->getGet('sort') ?? 'recency';
+        $order   = $this->request->getGet('order') ?? 'ASC';
+        $perPage = $this->request->getGet('per_page');
+
+        $sortMap = [
+            'id'              => 'tb_pelanggan.id',
+            'nama_pelanggan'  => 'tb_pelanggan.nama_pelanggan',
+            'recency'         => 'tb_rfm.recency',
+            'frequency'       => 'tb_rfm.frequency',
+            'monetary'        => 'tb_rfm.monetary',
+            'segment'         => 'tb_pelanggan.segment',
+        ];
+        $allowedSort = array_keys($sortMap);
+        $sort  = in_array($sort, $allowedSort, true) ? $sort : 'recency';
+        $order = strtoupper($order) === 'DESC' ? 'DESC' : 'ASC';
+
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        if (is_numeric($perPage)) {
+            $perPage = (int) $perPage;
+        }
+        $perPage = in_array($perPage, $allowedPerPage, true) ? $perPage : 100;
+
+        $selectCols = 'tb_rfm.*, tb_pelanggan.nama_pelanggan, tb_pelanggan.segment, tb_pelanggan.email, tb_pelanggan.telepon';
+        $sortCol    = $sortMap[$sort];
+
+        if ($perPage === 'all') {
+            $rfm = $this->rfmModel
+                ->select($selectCols)
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_rfm.id_pelanggan', 'left')
+                ->orderBy($sortCol, $order)
+                ->findAll();
+            $pager = null;
+        } else {
+            $page = (int) ($this->request->getGet('page') ?: 1);
+            $page = max($page, 1);
+
+            $this->rfmModel
+                ->select($selectCols)
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_rfm.id_pelanggan', 'left')
+                ->orderBy($sortCol, $order);
+
+            $total  = $this->rfmModel->countAllResults(false);
+            $offset = ($page - 1) * (int) $perPage;
+            $rfm    = $this->rfmModel->findAll((int) $perPage, $offset);
+
+            $pager = service('pager');
+            $pager->store('default', $page, (int) $perPage, $total, 0);
+            $pager->only(['sort', 'order', 'per_page']);
+        }
+
         $data = [
             'title'     => 'Analisis RFM',
             'pageTitle' => 'Analisis Data Pelanggan',
             'pageIcon'  => 'bi-graph-up',
-            'rfm'       => $this->rfmModel->getAllWithPelanggan(),
+            'rfm'       => $rfm,
+            'pager'     => $pager,
+            'sort'      => $sort,
+            'order'     => $order,
+            'perPage'   => $perPage,
             'ringkasan' => $this->pelanggan->countBySegment(),
         ];
         return view('pages/analisis/index', $data);

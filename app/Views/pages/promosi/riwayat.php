@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('main') ?>
+<?php $filterStatus ??= ''; $filterChannel ??= ''; $hasFilter ??= false; ?>
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-funnel"></i> Filter Riwayat</h2>

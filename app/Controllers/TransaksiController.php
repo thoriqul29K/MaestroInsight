@@ -19,11 +19,59 @@ class TransaksiController extends BaseController
 
     public function index()
     {
+        $sort  = $this->request->getGet('sort') ?? 'tb_transaksi.tanggal_transaksi';
+        $order = $this->request->getGet('order') ?? 'DESC';
+        $perPage = $this->request->getGet('per_page');
+
+        $allowedSort = [
+            'tb_transaksi.id',
+            'tb_transaksi.tanggal_transaksi',
+            'tb_pelanggan.nama_pelanggan',
+            'tb_transaksi.layanan',
+            'tb_transaksi.tujuan',
+            'tb_transaksi.jumlah_transaksi',
+        ];
+        $sort  = in_array($sort, $allowedSort, true) ? $sort : 'tb_transaksi.tanggal_transaksi';
+        $order = strtoupper($order) === 'DESC' ? 'DESC' : 'ASC';
+
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        if (is_numeric($perPage)) {
+            $perPage = (int) $perPage;
+        }
+        $perPage = in_array($perPage, $allowedPerPage, true) ? $perPage : 100;
+
+        if ($perPage === 'all') {
+            $transaksi = $this->model->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left')
+                ->orderBy($sort, $order)
+                ->findAll();
+            $pager = null;
+        } else {
+            $page = (int) ($this->request->getGet('page') ?: 1);
+            $page = max($page, 1);
+
+            $this->model->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left')
+                ->orderBy($sort, $order);
+            $total = $this->model->countAllResults(false);
+
+            $offset = ($page - 1) * (int) $perPage;
+            $transaksi = $this->model->findAll((int) $perPage, $offset);
+
+            $pager = service('pager');
+            $pager->store('default', $page, (int) $perPage, $total, 0);
+            $pager->only(['sort', 'order', 'per_page']);
+        }
+
         $data = [
             'title'     => 'Daftar Transaksi',
             'pageTitle' => 'Manajemen Transaksi',
             'pageIcon'  => 'bi-receipt',
-            'transaksi' => $this->model->getAllWithPelanggan(),
+            'transaksi' => $transaksi,
+            'pager'     => $pager,
+            'sort'      => $sort,
+            'order'     => $order,
+            'perPage'   => $perPage,
         ];
         return view('pages/transaksi/index', $data);
     }

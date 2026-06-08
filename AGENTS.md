@@ -11,12 +11,11 @@
 C:\xampp\mysql_start.bat
 
 # 2. Create the database (migrations won't create it).
-#    Uses bundled PHP, no mysql CLI required.
 php -r "$c=new mysqli('localhost','root','',null,3306);if($c->connect_error){exit(1);}$c->query('CREATE DATABASE IF NOT EXISTS db_maestrocrm CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci');"
 
 # 3. PHP deps + migrations + seeders.
 composer install
-cp env .env                    # .env is already configured for local XAMPP
+cp env .env
 php spark migrate
 php spark db:seed UserSeeder
 php spark db:seed PelangganSeeder
@@ -30,64 +29,63 @@ php spark serve
 ## Database
 
 - `.env` targets `db_maestrocrm` at `localhost:3306`, user `root`, no password (XAMPP default).
-- `app/Config/Database.php` `$default['encrypt']` is **`false`** — the framework's SSL array silently breaks on a local MySQL with no SSL configured. If you switch to a remote MySQL that requires SSL (e.g. Aivencloud), re-add the `encrypt` array with `ssl_verify => true`.
-- PHP doesn't allow `env()` calls in property defaults, so the env values are read in the **`__construct`** of `Database.php`. New `database.default.*` keys must be added there too.
-- `defaultGroup` is forced to `'default'` when `ENVIRONMENT === 'testing'`. Tests therefore run against the same DB as development (no separate test schema).
+- `app/Config/Database.php`: `$default['encrypt'] = false` (set to `false`, not array — the SSL array breaks on local MySQL). Env values are read in `__construct` because PHP can't call `env()` in property defaults. New `database.default.*` keys must go in the constructor too.
+- When `ENVIRONMENT === 'testing'`, `defaultGroup` is forced to `'default'` so tests run against the same MySQL DB (no separate test schema).
 
 ## Layout & views
 
-- `app/Views/layouts/header.php` + `footer.php` = sidebar, topbar, scripts. `layouts/main.php` wraps them and exposes a `main` section.
-- Page views extend `layouts/main` and put content in `<?= $this->section('main') ?>`:
-  - Flat: `app/Views/pages/{login,dashboard}.php`
-  - Per-section: `app/Views/pages/{pelanggan,transaksi,analisis,promosi}/{index,form,riwayat}.php`
-- Pages set `pageTitle`, `pageIcon`, `title` for the chrome to read. Flashdata alerts are rendered automatically by `layouts/main.php` — don't duplicate.
-- Static assets live in `public/assets/{css,img,script}/`. Logo: `public/assets/img/Maestro Logo (640 x 640).jpg`.
+- `app/Views/layouts/main.php` wraps `header.php` + `footer.php`. Page views extend `layouts/main` via `<?= $this->extend('layouts/main') ?>` and fill `<?= $this->section('main') ?>`.
+- Pages supply `$pageTitle`, `$pageIcon`, `$title`. Optional `$pageActions` renders action buttons in the header. Flashdata alerts (`success`, `error`, `errors`) are rendered automatically by `main.php` — don't duplicate.
+- Flat views: `app/Views/pages/{login,dashboard}.php`. Per-section: `pages/{pelanggan,transaksi,analisis,promosi}/{index,form,riwayat}.php`.
 
 ## Routes
 
-- `app/Config/Routes.php`. Public: `login` (GET+POST), `logout`. Everything else is inside `$routes->group('', ['filter' => 'auth'], ...)` — the `AuthFilter` in `app/Filters/AuthFilter.php` redirects unauthenticated users to `/login`. New protected routes must go inside that group.
-- Single role: `admin`. `tb_user.role` is `ENUM('admin')`.
+- `app/Config/Routes.php`. Public: `login` (GET+POST), `logout`. Everything else is inside `$routes->group('', ['filter' => 'auth'], ...)` — `AuthFilter` (`app/Filters/AuthFilter.php`) checks `session()->get('isLoggedIn')`. New protected routes must go inside that group.
+- Single role `admin` (`tb_user.role` is `ENUM('admin')`).
+- Available endpoints: `pelanggan` CRUD, `transaksi` CRUD, `analisis` (RFM view + POST `/analisis/proses-rfm-cluster` + GET `/analisis/progress`), `promosi` (POST `/promosi/kirim`, GET `/promosi/riwayat`, POST `/promosi/riwayat/hapus`).
 
 ## Python integration (RFM clustering)
 
-- `app/Libraries/clustering.py` is invoked by `app/Controllers/AnalisisController.php::prosesRFMCluster` via `shell_exec`. Do not rename or move either without updating the other.
-- Required Python packages: `pandas`, `numpy`, `scipy`, `sklearn`, `pymysql`. Install once: `pip install pandas numpy scipy scikit-learn pymysql`. `python` (or `python3`/`py`) must be on PATH — the controller probes in that order.
-- Flow: controller writes `writable/uploads/rfm_input.csv` → runs Python → reads `writable/uploads/rfm_output.csv` → updates `tb_pelanggan.segment`.
-- **Destructive**: `RfmService::hitungRFM()` does `$this->rfm->db->table('tb_rfm')->truncate()` then re-inserts. Don't call it while a read of `tb_rfm` is in flight, and don't run it on a production DB without backups.
-- The endpoint has a 3-minute timeout and writes a `writable/uploads/clustering_progress.json` consumed by `GET /analisis/progress` for an AJAX progress bar. Clustering log is at `writable/clustering_log.txt`.
+- `app/Libraries/clustering.py` is invoked by `AnalisisController::prosesRFMCluster` via `shell_exec`. Do not rename or move either without updating the other.
+- Required: `pip install pandas numpy scipy scikit-learn pymysql`. The interpreter (`python`/`python3`/`py`) must be on PATH — probed in that order by `findPython()`.
+- Flow: `RfmService::exportToCSV()` writes `writable/uploads/rfm_input.csv` → Python reads it, runs Ward linkage (Euclidean, 5 clusters), writes `writable/uploads/rfm_output.csv` → `importSegmentResults()` updates `tb_pelanggan.segment`.
+- **Destructive**: `RfmService::hitungRFM()` does `$this->rfm->db->table('tb_rfm')->truncate()` then re-inserts. Don't call it during concurrent reads of `tb_rfm`. Not safe on production DB without backups.
+- 5-min timeout (`CLUSTERING_TIMEOUT` in `.env`, default 300s). Progress written to `writable/uploads/clustering_progress.json` (polled by GET `/analisis/progress`). Debug log at `writable/logs/clustering_debug-YYYY-MM-DD.log`.
 
-## Promosi (notification sender)
+## Promosi (email sender)
 
-- `app/Libraries/Promosi/PromosiSender.php` is a registry. Only `EmailChannel` is wired in by default — it uses the SMTP settings in `.env` (Gmail + 16-char app password).
-- To add a channel, implement `ChannelInterface` (returns `SendResult`) and register it in `PromosiSender::__construct()`.
-- Every send attempt is logged to `tb_promosi_log` via `app/Models/PromosiLogModel.php`. View at `GET /promosi/riwayat`.
-
-## Email (SMTP)
-
-- Already configured in `.env`: `maestrotour2026@gmail.com` + app password. Consumed by `app/Config/Email.php`. The from-name is `"Maestro Wisata Raya"`.
+- `app/Libraries/Promosi/PromosiSender.php` is a registry. Only `EmailChannel` is wired by default — uses SMTP from `.env` (`maestrotour2026@gmail.com` + 16-char app password, Gmail SMTP, configured in `app/Config/Email.php`).
+- Implements `ChannelInterface` (returns `SendResult`) to add new channels. Every send is logged to `tb_promosi_log` via `app/Models/PromosiLogModel.php`.
 
 ## Testing
 
-- `phpunit.dist.xml` is committed. **`phpunit.xml` is gitignored** — without a local copy, tests fall back to the framework's hard-coded SQLite3 in-memory defaults, which fail because the PHP `sqlite3` extension is not installed on this machine. Create `phpunit.xml` from `phpunit.dist.xml` (the committed one overrides the test DB to `localhost/db_maestrocrm`).
-- Tests use the **same MySQL DB as development** (see Database above). Do not run `phpunit` against a production DB.
-- Every test class extending `CIUnitTestCase` MUST set:
+- `phpunit.xml` (gitignored) already exists locally, overriding tests to use `localhost/db_maestrocrm` with MySQLi. Without it, tests fall back to the framework's SQLite3 in-memory defaults, which fail because `sqlite3` is not installed.
+- Tests use the **same MySQL DB as development**. Do not run against production.
+- Every test class extending `CIUnitTestCase` **must** set:
   ```php
   protected $refresh = false;
   protected $migrate = false;
   ```
-  Otherwise CI4's `DatabaseTestTrait` drops all 4 app tables on every run.
+  Without these, CI4's `DatabaseTestTrait` drops all tables on every run.
 - Run commands:
   ```powershell
   vendor\bin\phpunit --testdox
-  vendor\bin\phpunit --testdox --filter "Rfm"
+  vendor\bin\phpunit --testdox --filter Rfm
   vendor\bin\phpunit tests\unit
   ```
-- 1 known non-critical warning: "No code coverage driver available" (Xdebug not installed). One test in `tests/database/ExampleDatabaseTest.php` is `markTestSkipped` — that's intentional.
+- Known: no Xdebug (coverage warning is non-critical). `tests/database/ExampleDatabaseTest.php::testSoftDeleteLeavesRow` is intentionally skipped.
 
-## Quirks worth knowing
+## Migrations & seeders
 
-- `.env` is gitignored; `env` (no dot) is the committed template. The two diverge — `.env` is the live config.
-- `encryption.key` in `.env` is a dev placeholder. Change before any production use.
-- Gitignored: `vendor/`, `build/`, `phpunit.xml`, `tests/coverage*`, `php_errors.log`, OS junk files. See `.gitignore`.
-- Composer starter (`codeigniter4/appstarter`) — `composer.json` is mostly the upstream template.
-- No linters, formatters, or static analysis configured. No CI workflows. No pre-commit hooks.
+- `app/Database/Migrations/` has the full schema. Recent migrations (2026-06-08) add `agama`, `tanggal_lahir`, `profesi` to `tb_pelanggan`; make `email` / `layanan` / `tujuan` nullable; add `attachment_filename` to `tb_promosi_log`. Always run `php spark migrate` on a fresh checkout.
+- Two alternative seeders for bulk CSV import exist but require files at `writable/uploads/DATA PELANGGAN 1.csv` and `writable/uploads/DATA TRANSAKSI PELANGGAN.csv`:
+  ```powershell
+  php spark db:seed ImportPelangganCsvSeeder
+  php spark db:seed ImportTransaksiCsvSeeder
+  ```
+
+## Quirks
+
+- `.env` is gitignored; `env` (no dot) is the committed template — they diverge.
+- `encryption.key` in `.env` is a dev placeholder (must change for production).
+- No linters, formatters, static analysis, CI workflows, or pre-commit hooks.

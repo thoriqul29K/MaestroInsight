@@ -10,7 +10,7 @@ class PelangganModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = true;
-    protected $allowedFields = ['nama_pelanggan', 'email', 'telepon', 'alamat', 'segment'];
+    protected $allowedFields = ['nama_pelanggan', 'email', 'telepon', 'alamat', 'agama', 'tanggal_lahir', 'profesi', 'segment'];
 
     public function getAllWithSegment(): array
     {

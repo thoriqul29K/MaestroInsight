@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('main') ?>
+<?php $pelanggan ??= []; $selected ??= ''; ?>
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-funnel"></i> Filter Pelanggan</h2>
@@ -57,7 +58,7 @@
         </div>
         <div class="form-group">
             <label for="pesan">Pesan Promosi *</label>
-            <textarea id="pesan" name="pesan" rows="5" required placeholder="Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen}..."><?= old('pesan') ?: "Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen} di PT. Maestro Wisata Raya. Hubungi kami sekarang juga!" ?></textarea>
+            <textarea id="pesan" name="pesan" rows="5" required placeholder="Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen}..."><?= old('pesan') ?: "Halo {nama}, dapatkan diskon spesial 25% untuk Anda {segmen} di Maestro Tour & Travel. Hubungi kami sekarang juga!" ?></textarea>
             <small class="hint">Gunakan <code>{nama}</code> (nama lengkap) dan <code>{segmen}</code> untuk personalisasi otomatis.</small>
         </div>
         <div class="form-group">
@@ -81,6 +82,7 @@
                         <th>No</th>
                         <th>Nama</th>
                         <th>Kontak</th>
+                        <th>Agama</th>
                         <th>Segmentasi</th>
                     </tr>
                 </thead>
@@ -105,6 +107,7 @@
                                 <i class="bi bi-telephone"></i> <?= esc($p['telepon']) ?><br>
                                 <i class="bi bi-envelope"></i> <?= esc($p['email']) ?>
                             </td>
+                            <td><?= esc($p['agama']) ?: '-' ?></td>
                             <td><?= $segmentLabel[$p['segment']] ?? '<span class="badge badge-default">Belum</span>' ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -138,24 +141,26 @@
 
 <?= $this->section('scripts') ?>
 <style>
-.image-preview {
-    margin-top: 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 10px;
-    display: inline-block;
-    max-width: 300px;
-}
-.image-preview img {
-    max-width: 100%;
-    max-height: 200px;
-    border-radius: 4px;
-    display: block;
-    margin-bottom: 8px;
-}
-.image-preview[hidden] {
-    display: none;
-}
+    .image-preview {
+        margin-top: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px;
+        display: inline-block;
+        max-width: 300px;
+    }
+
+    .image-preview img {
+        max-width: 100%;
+        max-height: 200px;
+        border-radius: 4px;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .image-preview[hidden] {
+        display: none;
+    }
 </style>
 <script>
     document.getElementById('checkAll')?.addEventListener('change', function(e) {
@@ -196,10 +201,10 @@
         });
     })();
 
-    const fileInput  = document.getElementById('gambar');
-    const preview    = document.getElementById('imagePreview');
+    const fileInput = document.getElementById('gambar');
+    const preview = document.getElementById('imagePreview');
     const previewImg = document.getElementById('previewImg');
-    const removeBtn  = document.getElementById('removeImage');
+    const removeBtn = document.getElementById('removeImage');
 
     fileInput?.addEventListener('change', function(e) {
         const file = e.target.files[0];
