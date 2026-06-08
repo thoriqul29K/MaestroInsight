@@ -29,9 +29,18 @@
                        value="<?= old('tanggal_transaksi', $transaksi['tanggal_transaksi'] ?? date('Y-m-d')) ?>" required>
             </div>
             <div class="form-group">
-                <label for="layanan">Layanan *</label>
-                <input type="text" id="layanan" name="layanan"
-                       value="<?= old('layanan', $transaksi['layanan'] ?? 'Paket Wisata') ?>" required>
+                <label>Layanan</label>
+                <?php $_layanan = old('layanan', isset($transaksi['layanan']) ? explode(',', $transaksi['layanan']) : []); ?>
+                <div class="checkbox-group">
+                    <?php foreach (['Dokumen', 'Cruise', 'Tour', 'Hotel', 'Transport', 'Ticket'] as $_opt): ?>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="layanan[]" value="<?= $_opt ?>"
+                            <?= in_array($_opt, is_array($_layanan) ? $_layanan : []) ? 'checked' : '' ?>>
+                        <i class="bi bi-check-circle-fill check-icon"></i>
+                        <?= $_opt ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
         <div class="form-row">
@@ -45,6 +54,10 @@
                 <input type="number" id="jumlah_transaksi" name="jumlah_transaksi" min="0"
                        value="<?= old('jumlah_transaksi', $transaksi['jumlah_transaksi'] ?? '') ?>" required>
             </div>
+        </div>
+        <div class="form-group">
+            <label for="detail_transaksi">Detail Transaksi</label>
+            <textarea id="detail_transaksi" name="detail_transaksi" rows="3" maxlength="200"><?= old('detail_transaksi', $transaksi['detail_transaksi'] ?? '') ?></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">

@@ -167,13 +167,40 @@ a:hover { text-decoration: underline; }
 .table-wrapper { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th, .data-table td {
-    padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border);
+    padding: 12px 16px; text-align: left;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+}
+.data-table th:last-child, .data-table td:last-child {
+    border-right: none;
 }
 .data-table th { background: #f8fafc; font-weight: 600; font-size: 12px; text-transform: uppercase; color: var(--text-muted); }
 .data-table tr:hover { background: #f8fafc; }
 .data-table .text-right { text-align: right; }
 .data-table .text-center { text-align: center; }
 .action-cell { display: flex; gap: 6px; }
+
+/* Resizable columns */
+.data-table th {
+    position: relative;
+}
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+    user-select: none;
+    transition: background .15s;
+}
+.resize-handle:hover {
+    background: rgba(30, 64, 175, 0.12);
+}
+.resize-handle.active {
+    background: rgba(30, 64, 175, 0.25);
+}
 
 /* Badges */
 .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
@@ -450,6 +477,50 @@ a:hover { text-decoration: underline; }
 .page-item.disabled span {
     color: #cbd5e1;
     cursor: not-allowed;
+}
+
+/* Checkbox pills (layanan) */
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 4px;
+}
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    user-select: none;
+    background: var(--surface);
+    color: var(--text);
+    transition: all .2s ease;
+}
+.checkbox-inline:hover {
+    border-color: var(--primary-light);
+    background: #f8faff;
+}
+.checkbox-inline:has(input:checked) {
+    border-color: var(--primary);
+    background: #eef2ff;
+    color: var(--primary-dark);
+    box-shadow: 0 0 0 1px rgba(30,64,175,.15);
+}
+.checkbox-inline input[type="checkbox"] {
+    display: none;
+}
+.checkbox-inline .check-icon {
+    display: none;
+    font-size: 14px;
+}
+.checkbox-inline:has(input:checked) .check-icon {
+    display: inline-block;
+    color: var(--primary);
 }
 
 /* Responsive */

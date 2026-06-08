@@ -10,7 +10,7 @@ class TransaksiModel extends Model
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
     protected $useTimestamps = true;
-    protected $allowedFields = ['id_pelanggan', 'tanggal_transaksi', 'layanan', 'tujuan', 'jumlah_transaksi'];
+    protected $allowedFields = ['id_pelanggan', 'tanggal_transaksi', 'layanan', 'tujuan', 'jumlah_transaksi', 'detail_transaksi'];
 
     public function getAllWithPelanggan(): array
     {

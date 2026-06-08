@@ -32,7 +32,7 @@ class TransaksiSeeder extends Seeder
                 $transaksi[] = [
                     'id_pelanggan'     => $idPelanggan,
                     'tanggal_transaksi' => $tanggal,
-                    'layanan'          => 'Paket Wisata',
+                    'layanan'          => 'Tour',
                     'tujuan'           => $this->getTujuan($idPelanggan),
                     'jumlah_transaksi' => intdiv($info['total'], $info['count']),
                     'created_at'       => $today . ' 00:00:00',

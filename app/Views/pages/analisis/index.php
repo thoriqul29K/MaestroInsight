@@ -133,7 +133,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
                     <th><?= $sortLink('nama_pelanggan', 'Pelanggan') ?></th>
                     <th><?= $sortLink('recency', 'Transaksi Terakhir') ?></th>
                     <th><?= $sortLink('frequency', 'Jumlah Transaksi') ?></th>
-                    <th><?= $sortLink('monetary', 'Jumlah Pengeluaran (Rp)') ?></th>
+                    <th class="text-center"><?= $sortLink('monetary', 'Jumlah Pengeluaran (Rp)') ?></th>
                     <th><?= $sortLink('segment', 'Segmentasi') ?></th>
                 </tr>
             </thead>
@@ -152,7 +152,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
                         <td><?= esc($r['nama_pelanggan']) ?></td>
                         <td><?= date('d/m/Y', strtotime("-{$r['recency']} days")) ?></td>
                         <td><?= (int) $r['frequency'] ?></td>
-                        <td class="text-right"><?= number_format($r['monetary'], 0, ',', '.') ?></td>
+                        <td class="text-center"><?= number_format($r['monetary'], 0, ',', '.') ?></td>
                         <td><?= $segmentLabel[$r['segment']] ?? '<span class="badge badge-default">Belum</span>' ?></td>
                     </tr>
                 <?php endforeach; ?>

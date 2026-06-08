@@ -51,9 +51,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
                     <th><?= $sortLink('tb_transaksi.id', 'ID') ?></th>
                     <th><?= $sortLink('tb_transaksi.tanggal_transaksi', 'Tanggal') ?></th>
                     <th><?= $sortLink('tb_pelanggan.nama_pelanggan', 'Pelanggan') ?></th>
-                    <th><?= $sortLink('tb_transaksi.layanan', 'Layanan') ?></th>
-                    <th><?= $sortLink('tb_transaksi.tujuan', 'Tujuan') ?></th>
-                    <th><?= $sortLink('tb_transaksi.jumlah_transaksi', 'Jumlah (Rp)') ?></th>
+                    <th class="text-center"><?= $sortLink('tb_transaksi.jumlah_transaksi', 'Jumlah (Rp)') ?></th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -63,9 +61,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
                         <td><?= $t['id'] ?></td>
                         <td><?= esc(date('d/m/Y', strtotime($t['tanggal_transaksi']))) ?></td>
                         <td><?= esc($t['nama_pelanggan']) ?></td>
-                        <td><?= esc($t['layanan']) ?: '-' ?></td>
-                        <td><?= esc($t['tujuan']) ?: '-' ?></td>
-                        <td class="text-right"><?= number_format($t['jumlah_transaksi'], 0, ',', '.') ?></td>
+                        <td class="text-center"><?= number_format($t['jumlah_transaksi'], 0, ',', '.') ?></td>
                         <td class="action-cell">
                             <a href="<?= base_url() ?>transaksi/edit/<?= $t['id'] ?>" class="btn btn-sm btn-edit" title="Edit">
                                 <i class="bi bi-pencil"></i>

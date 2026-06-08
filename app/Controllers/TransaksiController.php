@@ -93,20 +93,25 @@ class TransaksiController extends BaseController
         $rules = [
             'id_pelanggan'      => 'required|integer',
             'tanggal_transaksi' => 'required|valid_date',
-            'layanan'           => 'required',
+            'layanan'           => 'permit_empty',
             'tujuan'            => 'required',
             'jumlah_transaksi'  => 'required|numeric',
+            'detail_transaksi'  => 'permit_empty|max_length[200]',
         ];
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        $layanan = $this->request->getPost('layanan');
+        $layanan = is_array($layanan) ? implode(',', $layanan) : null;
+
         $this->model->insert([
             'id_pelanggan'      => $this->request->getPost('id_pelanggan'),
             'tanggal_transaksi' => $this->request->getPost('tanggal_transaksi'),
-            'layanan'           => $this->request->getPost('layanan'),
+            'layanan'           => $layanan,
             'tujuan'            => $this->request->getPost('tujuan'),
             'jumlah_transaksi'  => $this->request->getPost('jumlah_transaksi'),
+            'detail_transaksi'  => $this->request->getPost('detail_transaksi'),
         ]);
 
         return redirect()->to('/transaksi')->with('success', 'Transaksi berhasil ditambahkan.');
@@ -133,20 +138,25 @@ class TransaksiController extends BaseController
         $rules = [
             'id_pelanggan'      => 'required|integer',
             'tanggal_transaksi' => 'required|valid_date',
-            'layanan'           => 'required',
+            'layanan'           => 'permit_empty',
             'tujuan'            => 'required',
             'jumlah_transaksi'  => 'required|numeric',
+            'detail_transaksi'  => 'permit_empty|max_length[200]',
         ];
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        $layanan = $this->request->getPost('layanan');
+        $layanan = is_array($layanan) ? implode(',', $layanan) : null;
+
         $this->model->update($id, [
             'id_pelanggan'      => $this->request->getPost('id_pelanggan'),
             'tanggal_transaksi' => $this->request->getPost('tanggal_transaksi'),
-            'layanan'           => $this->request->getPost('layanan'),
+            'layanan'           => $layanan,
             'tujuan'            => $this->request->getPost('tujuan'),
             'jumlah_transaksi'  => $this->request->getPost('jumlah_transaksi'),
+            'detail_transaksi'  => $this->request->getPost('detail_transaksi'),
         ]);
 
         return redirect()->to('/transaksi')->with('success', 'Data transaksi diperbarui.');
