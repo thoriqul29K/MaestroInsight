@@ -20,7 +20,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
     <div class="card-header">
         <h2><i class="bi bi-people"></i> Daftar Pelanggan</h2>
         <div class="card-header-actions">
-            <a href="<?= base_url() ?>pelanggan/create" class="btn btn-primary">
+            <a href="<?= base_url('pelanggan/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-lg"></i> Tambah Pelanggan
             </a>
         </div>
@@ -30,9 +30,9 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
         <div class="per-page-selector">
             <label>Baris per halaman:</label>
             <select onchange="location.href='?'+this.value+'&sort=<?= $sort ?>&order=<?= $order ?>'"
-                    class="form-select per-page-select">
-                <option value="per_page=25"  <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
-                <option value="per_page=50"  <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
+                class="form-select per-page-select">
+                <option value="per_page=25" <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
+                <option value="per_page=50" <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
                 <option value="per_page=100" <?= $perPage == 100 ? 'selected' : '' ?>>100</option>
                 <option value="per_page=200" <?= $perPage == 200 ? 'selected' : '' ?>>200</option>
                 <option value="per_page=500" <?= $perPage == 500 ? 'selected' : '' ?>>500</option>
@@ -82,7 +82,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <a href="<?= base_url() ?>pelanggan/delete/<?= $p['id'] ?>" class="btn btn-sm btn-delete" title="Hapus"
-                               onclick="return confirm('Hapus pelanggan ini?')">
+                                onclick="return confirm('Hapus pelanggan ini?')">
                                 <i class="bi bi-trash"></i>
                             </a>
                         </td>

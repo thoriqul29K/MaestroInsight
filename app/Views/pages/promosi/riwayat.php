@@ -7,7 +7,9 @@ $startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('main') ?>
-<?php $filterStatus ??= ''; $filterChannel ??= ''; $hasFilter ??= false; ?>
+<?php $filterStatus ??= '';
+$filterChannel ??= '';
+$hasFilter ??= false; ?>
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-funnel"></i> Filter Riwayat</h2>
@@ -37,7 +39,7 @@ $startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
             </div>
             <?php if ($hasFilter): ?>
                 <div class="form-group" style="align-self: end;">
-                    <a href="<?= base_url() ?>promosi/riwayat" class="btn btn-secondary">
+                    <a href="<?= base_url('promosi/riwayat') ?>" class="btn btn-secondary">
                         <i class="bi bi-x-circle"></i> Reset Filter
                     </a>
                 </div>
@@ -64,7 +66,7 @@ $startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
         <div class="empty-state">
             <i class="bi bi-inbox"></i>
             <p>Belum ada riwayat pengiriman promosi.</p>
-            <a href="<?= base_url() ?>promosi" class="btn btn-primary">
+            <a href="<?= base_url('promosi') ?>" class="btn btn-primary">
                 <i class="bi bi-megaphone"></i> Buat Promosi Pertama
             </a>
         </div>
@@ -73,9 +75,9 @@ $startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
             <div class="per-page-selector">
                 <label>Baris per halaman:</label>
                 <select onchange="location.href='?'+this.value+'&status=<?= $filterStatus ?>&channel=<?= $filterChannel ?>'"
-                        class="form-select per-page-select">
-                    <option value="per_page=25"  <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
-                    <option value="per_page=50"  <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
+                    class="form-select per-page-select">
+                    <option value="per_page=25" <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
+                    <option value="per_page=50" <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
                     <option value="per_page=100" <?= $perPage == 100 ? 'selected' : '' ?>>100</option>
                     <option value="per_page=200" <?= $perPage == 200 ? 'selected' : '' ?>>200</option>
                     <option value="per_page=500" <?= $perPage == 500 ? 'selected' : '' ?>>500</option>
@@ -88,7 +90,7 @@ $startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
                 </div>
             <?php endif; ?>
         </div>
-        <form method="post" action="<?= base_url() ?>promosi/riwayat/hapus" id="formHapusSelected">
+        <form method="post" action="<?= base_url('promosi/riwayat/hapus') ?>" id="formHapusSelected">
             <?= csrf_field() ?>
             <input type="hidden" name="mode" value="selected">
             <div class="table-wrapper">

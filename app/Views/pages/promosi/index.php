@@ -1,7 +1,8 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('main') ?>
-<?php $pelanggan ??= []; $selected ??= ''; ?>
+<?php $pelanggan ??= [];
+$selected ??= ''; ?>
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-funnel"></i> Filter Pelanggan</h2>
@@ -35,11 +36,11 @@
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-megaphone"></i> Kirim Promosi</h2>
-        <a href="<?= base_url() ?>promosi/riwayat" class="btn btn-secondary">
+        <a href="<?= base_url('promosi/riwayat') ?>" class="btn btn-secondary">
             <i class="bi bi-clock-history"></i> Riwayat
         </a>
     </div>
-    <form action="<?= base_url() ?>promosi/kirim" method="post" id="formPromosi" class="form" enctype="multipart/form-data">
+    <form action="<?= base_url('promosi/kirim') ?>" method="post" id="formPromosi" class="form" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="form-row">
             <div class="form-group">

@@ -2,7 +2,6 @@
 $session = session();
 $namaLengkap = $session->get('nama_lengkap') ?? 'Pengguna';
 $segment = service('uri')->getSegment(1) ?: 'dashboard';
-$baseURL = base_url();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -23,7 +22,7 @@ $baseURL = base_url();
         <button class="hamburger-btn" id="hamburgerBtn" aria-label="Buka menu">
             <span></span><span></span><span></span>
         </button>
-        <a href="<?= $baseURL ?>" class="topbar-brand">
+        <a href="<?= base_url('/') ?>" class="topbar-brand">
             <img src="<?= base_url('assets/img/maestro-logo-640x640.jpg') ?>" alt="Maestro" class="brand-logo">
             <div class="brand-text">
                 <strong>MaestroInsight</strong>
@@ -31,7 +30,7 @@ $baseURL = base_url();
             </div>
         </a>
         <nav class="topbar-nav">
-            <a href="<?= base_url('dashboard') ?>" class="nav-link <?= $segment === 'dashboard' ? 'active' : '' ?>">
+            <a href="<?= base_url('/') ?>" class="nav-link <?= $segment === 'dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-speedometer2"></i><span>Dashboard</span>
             </a>
             <a href="<?= base_url('pelanggan') ?>" class="nav-link <?= $segment === 'pelanggan' ? 'active' : '' ?>">
@@ -50,7 +49,7 @@ $baseURL = base_url();
         <div class="topbar-user">
             <i class="bi bi-person-circle"></i>
             <span class="topbar-user-name"><?= esc($namaLengkap) ?></span>
-            <a href="<?= $baseURL ?>logout" class="btn-logout"><i class="bi bi-box-arrow-right"></i> <span class="logout-label">Keluar</span></a>
+            <a href="<?= base_url('logout') ?>" class="btn-logout"><i class="bi bi-box-arrow-right"></i> <span class="logout-label">Keluar</span></a>
         </div>
     </header>
 
@@ -81,7 +80,7 @@ $baseURL = base_url();
         </nav>
         <div class="drawer-footer">
             <span class="drawer-user"><i class="bi bi-person-circle"></i> <?= esc($namaLengkap) ?></span>
-            <a href="<?= $baseURL ?>logout" class="drawer-logout"><i class="bi bi-box-arrow-right"></i> Keluar</a>
+            <a href="<?= base_url('logout') ?>" class="drawer-logout"><i class="bi bi-box-arrow-right"></i> Keluar</a>
         </div>
     </aside>
 

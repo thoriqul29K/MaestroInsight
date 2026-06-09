@@ -64,7 +64,7 @@
 <div class="card">
     <div class="card-header">
         <h2><i class="bi bi-bar-chart"></i> Ringkasan Segmen Pelanggan</h2>
-        <a href="<?= base_url() ?>analisis" class="btn btn-sm btn-primary">Lihat Analisis</a>
+        <a href="<?= base_url('analisis') ?>" class="btn btn-sm btn-primary">Lihat Analisis</a>
     </div>
     <div class="segmen-grid">
         <div class="segmen-card segmen-loyal">
@@ -104,40 +104,42 @@
 <?= $this->section('scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-const segmenData = <?= json_encode([
-    'labels' => ['Loyal', 'Potential', 'Budget Hunter', 'Seasonal', 'At Risk', 'Belum'],
-    'data'   => [
-        $segmen['loyal'] ?? 0,
-        $segmen['potential'] ?? 0,
-        $segmen['budget'] ?? 0,
-        $segmen['seasonal'] ?? 0,
-        $segmen['at_risk'] ?? 0,
-        $segmen['belum'] ?? 0,
-    ],
-]) ?>;
-const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#9ca3af'];
+    const segmenData = <?= json_encode([
+                            'labels' => ['Loyal', 'Potential', 'Budget Hunter', 'Seasonal', 'At Risk', 'Belum'],
+                            'data'   => [
+                                $segmen['loyal'] ?? 0,
+                                $segmen['potential'] ?? 0,
+                                $segmen['budget'] ?? 0,
+                                $segmen['seasonal'] ?? 0,
+                                $segmen['at_risk'] ?? 0,
+                                $segmen['belum'] ?? 0,
+                            ],
+                        ]) ?>;
+    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#9ca3af'];
 
-const ctx = document.getElementById('chartSegmen');
-if (ctx) {
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: segmenData.labels,
-            datasets: [{
-                data: segmenData.data,
-                backgroundColor: colors,
-                borderWidth: 2,
-                borderColor: '#fff',
-            }],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' },
+    const ctx = document.getElementById('chartSegmen');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: segmenData.labels,
+                datasets: [{
+                    data: segmenData.data,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }],
             },
-        },
-    });
-}
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                },
+            },
+        });
+    }
 </script>
 <?= $this->endSection() ?>

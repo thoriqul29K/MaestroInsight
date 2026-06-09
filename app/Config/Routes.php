@@ -14,7 +14,6 @@ $routes->get('logout', 'AuthController::logout');
 /* ===== Protected (auth filter) ===== */
 $routes->group('', ['filter' => 'auth'], function ($routes) {
     $routes->get('/',         'DashboardController::index');
-    $routes->get('dashboard', 'DashboardController::index');
 
     $routes->get('pelanggan',                 'PelangganController::index');
     $routes->get('pelanggan/create',          'PelangganController::create');

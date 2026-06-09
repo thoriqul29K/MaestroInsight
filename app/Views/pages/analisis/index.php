@@ -1,5 +1,9 @@
 <?php
-$sort ??= ''; $order ??= 'ASC'; $perPage ??= 10; $rfm ??= []; $pager ??= null;
+$sort ??= '';
+$order ??= 'ASC';
+$perPage ??= 10;
+$rfm ??= [];
+$pager ??= null;
 $sortLink = function ($col, $label) use ($sort, $order, $perPage) {
     $newOrder = ($sort === $col && $order === 'ASC') ? 'DESC' : 'ASC';
     $arrow    = '';
@@ -61,7 +65,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
         <h2><i class="bi bi-cpu"></i> Lakukan Segmentasi</h2>
     </div>
     <div class="action-buttons" id="actionButtons">
-        <form action="<?= base_url() ?>analisis/proses-rfm-cluster" method="post" style="display:inline" class="js-long-form">
+        <form action="<?= base_url('analisis/proses-rfm-cluster') ?>" method="post" style="display:inline" class="js-long-form">
             <?= csrf_field() ?>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-cpu"></i> Mulai Proses
@@ -109,9 +113,9 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
         <div class="per-page-selector">
             <label>Baris per halaman:</label>
             <select onchange="location.href='?'+this.value+'&sort=<?= $sort ?>&order=<?= $order ?>'"
-                    class="form-select per-page-select">
-                <option value="per_page=25"  <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
-                <option value="per_page=50"  <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
+                class="form-select per-page-select">
+                <option value="per_page=25" <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
+                <option value="per_page=50" <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
                 <option value="per_page=100" <?= $perPage == 100 ? 'selected' : '' ?>>100</option>
                 <option value="per_page=200" <?= $perPage == 200 ? 'selected' : '' ?>>200</option>
                 <option value="per_page=500" <?= $perPage == 500 ? 'selected' : '' ?>>500</option>
