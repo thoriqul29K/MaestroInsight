@@ -1,22 +1,3 @@
-<?php
-$sort ??= '';
-$order ??= 'ASC';
-$perPage ??= 10;
-$rfm ??= [];
-$pager ??= null;
-$sortLink = function ($col, $label) use ($sort, $order, $perPage) {
-    $newOrder = ($sort === $col && $order === 'ASC') ? 'DESC' : 'ASC';
-    $arrow    = '';
-    if ($sort === $col) {
-        $arrow = ' <i class="bi bi-arrow-' . ($order === 'ASC' ? 'up' : 'down') . '"></i>';
-    }
-    $qs = http_build_query(['sort' => $col, 'order' => $newOrder, 'per_page' => $perPage]);
-    return '<a href="?' . $qs . '">' . $label . $arrow . '</a>';
-};
-$request  = service('request');
-$page     = (int) ($request->getGet('page') ?: 1);
-$startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
-?>
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('main') ?>
@@ -78,7 +59,7 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
             <h3 id="confirmModalTitle" class="confirm-modal-title">Konfirmasi Proses</h3>
             <p class="confirm-modal-body">
                 Proses segmentasi pelanggan dapat memakan waktu beberapa menit.
-                Anda tetap dapat berpindah menu &mdash; proses akan tetap berjalan hingga selesai.
+                Anda tetap dapat berpindah menu, proses akan tetap berjalan hingga selesai.
             </p>
             <div class="confirm-modal-actions">
                 <button type="button" class="btn btn-secondary" data-action="cancel">Batal</button>
@@ -112,90 +93,311 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
     <div class="table-toolbar">
         <div class="per-page-selector">
             <label>Baris per halaman:</label>
-            <select onchange="location.href='?'+this.value+'&sort=<?= $sort ?>&order=<?= $order ?>'"
-                class="form-select per-page-select">
-                <option value="per_page=25" <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
-                <option value="per_page=50" <?= $perPage == 50 ? 'selected' : '' ?>>50</option>
-                <option value="per_page=100" <?= $perPage == 100 ? 'selected' : '' ?>>100</option>
-                <option value="per_page=200" <?= $perPage == 200 ? 'selected' : '' ?>>200</option>
-                <option value="per_page=500" <?= $perPage == 500 ? 'selected' : '' ?>>500</option>
-                <option value="per_page=all" <?= $perPage == 'all' ? 'selected' : '' ?>>Semua</option>
+            <select id="perPage" class="form-select per-page-select">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+                <option value="all">Semua</option>
             </select>
         </div>
-        <?php if ($perPage !== 'all' && $pager): ?>
-            <div class="pagination-info">
-                Menampilkan <?= $startNum ?>–<?= min($startNum + count($rfm) - 1, $pager->getTotal()) ?> dari <?= $pager->getTotal() ?>
-            </div>
-        <?php endif; ?>
+        <div class="pagination-info">
+            <span id="rowCounter" class="row-counter">Memuat…</span>
+        </div>
     </div>
 
     <div class="table-wrapper">
         <table class="data-table">
             <thead>
                 <tr>
-                    <th><?= $sortLink('id', 'ID Pelanggan') ?></th>
-                    <th><?= $sortLink('nama_pelanggan', 'Pelanggan') ?></th>
-                    <th><?= $sortLink('recency', 'Transaksi Terakhir') ?></th>
-                    <th><?= $sortLink('frequency', 'Jumlah Transaksi') ?></th>
-                    <th class="text-center"><?= $sortLink('monetary', 'Jumlah Pengeluaran (Rp)') ?></th>
-                    <th><?= $sortLink('segment', 'Segmentasi') ?></th>
+                    <th class="sortable" data-sort="id">ID Pelanggan <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="nama_pelanggan">Nama Pelanggan <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="recency">Transaksi Terakhir Dilakukan <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="frequency">Jumlah Transaksi Dilakukan <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable text-center" data-sort="monetary">Total Pengeluaran (Rp) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="segment">Segmen <i class="bi bi-arrow-down-up sort-icon"></i></th>
                 </tr>
             </thead>
-            <tbody>
-                <?php
-                $segmentLabel = [
-                    'loyal'     => '<span class="badge badge-loyal">Loyal</span>',
-                    'potential' => '<span class="badge badge-potential">Potential</span>',
-                    'budget'    => '<span class="badge badge-budget">Budget Hunter</span>',
-                    'seasonal'  => '<span class="badge badge-seasonal">Seasonal</span>',
-                    'at_risk'   => '<span class="badge badge-risk">At Risk</span>',
-                ];
-                foreach ($rfm ?? [] as $r): ?>
-                    <tr>
-                        <td><?= $r['id_pelanggan'] ?></td>
-                        <td><?= esc($r['nama_pelanggan']) ?></td>
-                        <td><?= date('d/m/Y', strtotime("-{$r['recency']} days")) ?></td>
-                        <td><?= (int) $r['frequency'] ?></td>
-                        <td class="text-center"><?= number_format($r['monetary'], 0, ',', '.') ?></td>
-                        <td><?= $segmentLabel[$r['segment']] ?? '<span class="badge badge-default">Belum</span>' ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if (empty($rfm)): ?>
-                    <tr>
-                        <td colspan="6" class="text-center">Belum ada data. Klik "Hitung RFM & Clustering" terlebih dahulu.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
+            <tbody id="tbody"></tbody>
         </table>
     </div>
 
-    <?php if ($perPage !== 'all' && $pager): ?>
-        <div class="pagination-wrapper">
-            <?= $pager->links('default', 'default_full') ?>
-        </div>
-    <?php endif; ?>
+    <nav id="pagerNav" class="pager" aria-label="Pagination"></nav>
 </div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<style>
+    .row-counter {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .data-table th.sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .data-table th.sortable:hover {
+        background: #f3f4f6;
+    }
+
+    .data-table th .sort-icon {
+        margin-left: 4px;
+        opacity: 0.5;
+        font-size: 0.85em;
+    }
+
+    .data-table th.sort-asc .sort-icon,
+    .data-table th.sort-desc .sort-icon {
+        opacity: 1;
+    }
+
+    .pager {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+        margin: 12px 0;
+        flex-wrap: wrap;
+    }
+
+    .pager .page-btn {
+        min-width: 36px;
+        height: 36px;
+        padding: 0 10px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #374151;
+    }
+
+    .pager .page-btn:hover:not(:disabled) {
+        background: #f3f4f6;
+    }
+
+    .pager .page-btn.active {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+    }
+
+    .pager .page-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pager .ellipsis {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 6px;
+        color: #6b7280;
+    }
+
+    .empty-row td {
+        text-align: center;
+        color: #6b7280;
+        padding: 24px 8px;
+    }
+</style>
 <script>
     (function() {
         'use strict';
 
+        const SEGMENT_LABELS = {
+            loyal: '<span class="badge badge-loyal">Loyal</span>',
+            potential: '<span class="badge badge-potential">Potential</span>',
+            budget: '<span class="badge badge-budget">Budget Hunter</span>',
+            seasonal: '<span class="badge badge-seasonal">Seasonal</span>',
+            at_risk: '<span class="badge badge-risk">At Risk</span>',
+        };
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[c]);
+        }
+
+        function formatNumber(n) {
+            return Number(n).toLocaleString('id-ID');
+        }
+
+        function recencyToDate(days) {
+            const d = new Date();
+            d.setDate(d.getDate() - parseInt(days, 10));
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        /* ===== Table AJAX state ===== */
+        const tableState = {
+            page: 1,
+            sort: 'id',
+            dir: 'asc',
+            perPage: document.getElementById('perPage').value || '100',
+            total: 0,
+            totalPages: 0,
+        };
+
+        const tbody = document.getElementById('tbody');
+        const counterEl = document.getElementById('rowCounter');
+        const pagerEl = document.getElementById('pagerNav');
+        const perPageEl = document.getElementById('perPage');
+
+        function updateCounter() {
+            if (tableState.total === 0) {
+                counterEl.textContent = '0 data RFM';
+                return;
+            }
+            let from, to;
+            if (tableState.perPage === 'all') {
+                from = 1;
+                to = tableState.total;
+            } else {
+                const pp = parseInt(tableState.perPage, 10);
+                from = (tableState.page - 1) * pp + 1;
+                to = Math.min(tableState.page * pp, tableState.total);
+            }
+            counterEl.textContent = `Menampilkan ${from}–${to} dari ${tableState.total} data RFM`;
+        }
+
+        function renderRows(rows) {
+            if (!rows.length) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Belum ada data. Klik "Mulai Proses" terlebih dahulu.</td></tr>';
+                return;
+            }
+            let html = '';
+            rows.forEach(r => {
+                const segBadge = SEGMENT_LABELS[r.segment] || '<span class="badge badge-default">Belum</span>';
+                html += `<tr>
+                    <td>${escapeHtml(r.id_pelanggan)}</td>
+                    <td>${escapeHtml(r.nama_pelanggan)}</td>
+                    <td>${recencyToDate(r.recency)}</td>
+                    <td>${parseInt(r.frequency, 10)}</td>
+                    <td class="text-center">${formatNumber(r.monetary)}</td>
+                    <td>${segBadge}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderPager() {
+            if (tableState.totalPages <= 1) {
+                pagerEl.innerHTML = '';
+                return;
+            }
+            const tp = tableState.totalPages;
+            const p = tableState.page;
+            const pages = new Set([1, tp, p, p - 1, p + 1]);
+            const list = [...pages].filter(x => x >= 1 && x <= tp).sort((a, b) => a - b);
+            let html = `<button type="button" class="page-btn" data-page="${p - 1}" ${p === 1 ? 'disabled' : ''}>&lsaquo;</button>`;
+            let prev = 0;
+            list.forEach(n => {
+                if (prev && n - prev > 1) html += '<span class="ellipsis">…</span>';
+                html += `<button type="button" class="page-btn ${n === p ? 'active' : ''}" data-page="${n}">${n}</button>`;
+                prev = n;
+            });
+            html += `<button type="button" class="page-btn" data-page="${p + 1}" ${p === tp ? 'disabled' : ''}>&rsaquo;</button>`;
+            pagerEl.innerHTML = html;
+        }
+
+        function updateSortIcons() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'bi bi-arrow-down-up sort-icon';
+            });
+            const active = document.querySelector(`th.sortable[data-sort="${tableState.sort}"]`);
+            if (active) {
+                active.classList.add(tableState.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+                const icon = active.querySelector('.sort-icon');
+                if (icon) {
+                    const arrowClass = tableState.dir === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down';
+                    icon.className = `bi ${arrowClass} sort-icon`;
+                }
+            }
+        }
+
+        async function fetchRfm() {
+            const params = new URLSearchParams({
+                sort: tableState.sort,
+                dir: tableState.dir,
+                per_page: tableState.perPage,
+                page: tableState.page,
+            });
+            try {
+                const res = await fetch('<?= base_url('analisis/data') ?>?' + params.toString(), {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!res.ok) throw new Error('Gagal memuat data');
+                const data = await res.json();
+                tableState.total = data.total;
+                tableState.totalPages = data.total_pages;
+                tableState.page = data.page;
+                renderRows(data.rows);
+                renderPager();
+                updateCounter();
+                updateSortIcons();
+            } catch (e) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Gagal memuat data: ${escapeHtml(e.message)}</td></tr>`;
+                counterEl.textContent = '';
+                pagerEl.innerHTML = '';
+            }
+        }
+
+        perPageEl.addEventListener('change', () => {
+            tableState.perPage = perPageEl.value;
+            tableState.page = 1;
+            fetchRfm();
+        });
+
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                if (tableState.sort === key) {
+                    tableState.dir = tableState.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    tableState.sort = key;
+                    tableState.dir = 'asc';
+                }
+                tableState.page = 1;
+                fetchRfm();
+            });
+        });
+
+        pagerEl.addEventListener('click', e => {
+            const btn = e.target.closest('.page-btn');
+            if (!btn || btn.disabled) return;
+            const p = parseInt(btn.dataset.page, 10);
+            if (!p || p < 1 || p > tableState.totalPages || p === tableState.page) return;
+            tableState.page = p;
+            fetchRfm();
+        });
+
+        fetchRfm();
+
+        /* ===== Clustering progress ===== */
         var statusBox = document.getElementById('clusteringStatus');
         var statusTitle = document.getElementById('clusteringTitle');
         var statusDetail = document.getElementById('clusteringDetail');
         var progressBar = document.getElementById('progressBarFill');
-        var actionButtons = document.getElementById('actionButtons');
-        var progressUrl = '<?= base_url() ?>analisis/progress';
+        var actionBtns = document.getElementById('actionButtons');
+        var progressUrl = '<?= base_url('analisis/progress') ?>';
         var confirmModal = document.getElementById('confirmModal');
         var pendingForm = null;
 
         function getCsrfMeta() {
             var meta = document.querySelector('meta[name="csrf-token"]');
-            if (meta) {
-                return meta.getAttribute('content');
-            }
+            if (meta) return meta.getAttribute('content');
             var input = document.querySelector('input[name="<?= csrf_token() ?>"]');
             return input ? input.value : '';
         }
@@ -215,8 +417,8 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
         }
 
         function setButtonsDisabled(disabled) {
-            if (!actionButtons) return;
-            actionButtons.querySelectorAll('button').forEach(function(b) {
+            if (!actionBtns) return;
+            actionBtns.querySelectorAll('button').forEach(function(b) {
                 b.disabled = disabled;
             });
         }
@@ -231,9 +433,8 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
 
         function closeConfirm() {
             if (confirmModal) {
-                if (typeof confirmModal.close === 'function') {
-                    confirmModal.close();
-                } else {
+                if (typeof confirmModal.close === 'function') confirmModal.close();
+                else {
                     confirmModal.open = false;
                     confirmModal.removeAttribute('open');
                 }
@@ -284,22 +485,14 @@ $startNum = ($perPage === 'all') ? 1 : (($page - 1) * (int) $perPage + 1);
                         var percent = parseInt(p.percent, 10) || 0;
                         var stage = p.stage || '';
                         var detail = p.detail || '';
-
                         var title = (stage === 'rfm') ? 'Menghitung nilai RFM...' :
                             (stage === 'clustering') ? 'Menjalankan Hierarchical Clustering...' :
                             (stage === 'done') ? 'Selesai' :
-                            (stage === 'error') ? 'Gagal' :
-                            'Sedang memproses...';
-
+                            (stage === 'error') ? 'Gagal' : 'Sedang memproses...';
                         showStatus(title, detail, percent);
-
-                        if (percent >= 100) {
-                            clearInterval(pollTimer);
-                        }
+                        if (percent >= 100) clearInterval(pollTimer);
                     })
-                    .catch(function() {
-                        /* abaikan error polling, request utama masih jalan */
-                    });
+                    .catch(function() {});
             }, 800);
 
             fetch(form.action, {

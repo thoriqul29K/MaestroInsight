@@ -60,6 +60,62 @@ class PelangganController extends BaseController
         return view('pages/pelanggan/index', $data);
     }
 
+    public function data()
+    {
+        $allowedSort = [
+            'id'            => 'id',
+            'nama_pelanggan'=> 'nama_pelanggan',
+            'email'         => 'email',
+            'telepon'       => 'telepon',
+            'agama'         => 'agama',
+            'segment'       => 'segment',
+        ];
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        $allowedDir     = ['asc', 'desc'];
+
+        $sortKey = (string) ($this->request->getGet('sort') ?? 'id');
+        $sort    = $allowedSort[$sortKey] ?? 'id';
+
+        $dir = strtolower((string) ($this->request->getGet('dir') ?? 'asc'));
+        if (! in_array($dir, $allowedDir, true)) {
+            $dir = 'asc';
+        }
+
+        $perPageRaw = $this->request->getGet('per_page');
+        if (is_numeric($perPageRaw)) {
+            $perPage = (int) $perPageRaw;
+        } else {
+            $perPage = (string) $perPageRaw;
+        }
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 100;
+        }
+
+        $page = max((int) ($this->request->getGet('page') ?: 1), 1);
+
+        $total = $this->model->countAllResults(true);
+
+        if ($perPage === 'all') {
+            $rows       = $this->model->orderBy($sort, $dir)->findAll();
+            $totalPages = $total > 0 ? 1 : 0;
+            $page       = 1;
+        } else {
+            $offset     = ($page - 1) * (int) $perPage;
+            $rows       = $this->model->orderBy($sort, $dir)->findAll((int) $perPage - 1, $offset);
+            $totalPages = (int) ceil($total / (int) $perPage);
+        }
+
+        return $this->response->setJSON([
+            'rows'        => $rows,
+            'total'       => (int) $total,
+            'page'        => (int) $page,
+            'per_page'    => $perPage === 'all' ? 'all' : (int) $perPage,
+            'total_pages' => (int) $totalPages,
+            'sort'        => $sortKey,
+            'dir'         => $dir,
+        ]);
+    }
+
     public function create()
     {
         $data = [

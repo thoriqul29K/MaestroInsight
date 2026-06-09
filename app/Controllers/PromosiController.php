@@ -31,6 +31,73 @@ class PromosiController extends BaseController
         return view('pages/promosi/index', $data);
     }
 
+    public function data()
+    {
+        $allowedSegments = ['loyal', 'potential', 'budget', 'seasonal', 'at_risk'];
+        $allowedPerPage  = [25, 50, 100, 'all'];
+        $allowedSort     = [
+            'no'      => 'id',
+            'nama'    => 'nama_pelanggan',
+            'kontak'  => 'telepon',
+            'agama'   => 'agama',
+            'segment' => 'segment',
+        ];
+        $allowedDir = ['asc', 'desc'];
+
+        $segment = (string) ($this->request->getGet('segment') ?? '');
+        if (! in_array($segment, $allowedSegments, true)) {
+            $segment = '';
+        }
+
+        $perPageRaw = $this->request->getGet('per_page');
+        if (is_numeric($perPageRaw)) {
+            $perPage = (int) $perPageRaw;
+        } else {
+            $perPage = (string) $perPageRaw;
+        }
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 50;
+        }
+
+        $sortKey = (string) ($this->request->getGet('sort') ?? 'no');
+        $sort    = $allowedSort[$sortKey] ?? 'nama_pelanggan';
+
+        $dir = strtolower((string) ($this->request->getGet('dir') ?? 'asc'));
+        if (! in_array($dir, $allowedDir, true)) {
+            $dir = 'asc';
+        }
+
+        $page = max((int) ($this->request->getGet('page') ?: 1), 1);
+
+        $base = $this->model;
+        if ($segment !== '') {
+            $base = $base->where('segment', $segment);
+        }
+
+        $total = $base->countAllResults(false);
+
+        if ($perPage === 'all') {
+            $rows       = $base->orderBy($sort, $dir)->findAll();
+            $totalPages = $total > 0 ? 1 : 0;
+            $page       = 1;
+        } else {
+            $perPageInt = (int) $perPage;
+            $offset     = ($page - 1) * $perPageInt;
+            $rows       = $base->orderBy($sort, $dir)->findAll($perPageInt - 1, $offset);
+            $totalPages = (int) ceil($total / $perPageInt);
+        }
+
+        return $this->response->setJSON([
+            'rows'        => $rows,
+            'total'       => (int) $total,
+            'page'        => (int) $page,
+            'per_page'    => $perPage === 'all' ? 'all' : (int) $perPage,
+            'total_pages' => (int) $totalPages,
+            'sort'        => $sortKey,
+            'dir'         => $dir,
+        ]);
+    }
+
     public function kirim()
     {
         $rules = [
@@ -51,7 +118,7 @@ class PromosiController extends BaseController
         $pesan   = (string) $this->request->getPost('pesan');
 
         $pelangganList = $this->model->whereIn('id', $ids)->findAll();
-        $withEmail     = array_values(array_filter($pelangganList, static fn ($p) => ! empty($p['email'])));
+        $withEmail     = array_values(array_filter($pelangganList, static fn($p) => ! empty($p['email'])));
 
         if (empty($withEmail)) {
             return redirect()->back()->withInput()->with('error', 'Tidak ada pelanggan yang memiliki alamat email valid pada pilihan Anda.');
@@ -168,7 +235,7 @@ class PromosiController extends BaseController
             $msg = "Berhasil menghapus {$deleted} riwayat promosi (sesuai filter aktif).";
         } else {
             $ids = (array) $this->request->getPost('id_log');
-            $ids = array_values(array_filter($ids, static fn ($v) => ctype_digit((string) $v)));
+            $ids = array_values(array_filter($ids, static fn($v) => ctype_digit((string) $v)));
 
             if (empty($ids)) {
                 return redirect()->to('/promosi/riwayat')

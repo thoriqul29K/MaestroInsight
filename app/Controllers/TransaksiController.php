@@ -76,6 +76,74 @@ class TransaksiController extends BaseController
         return view('pages/transaksi/index', $data);
     }
 
+    public function data()
+    {
+        $allowedSort = [
+            'id'            => 'tb_transaksi.id',
+            'tanggal'       => 'tb_transaksi.tanggal_transaksi',
+            'pelanggan'     => 'tb_pelanggan.nama_pelanggan',
+            'layanan'       => 'tb_transaksi.layanan',
+            'tujuan'        => 'tb_transaksi.tujuan',
+            'jumlah'        => 'tb_transaksi.jumlah_transaksi',
+        ];
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        $allowedDir     = ['asc', 'desc'];
+
+        $sortKey = (string) ($this->request->getGet('sort') ?? 'id');
+        $sort    = $allowedSort[$sortKey] ?? 'tb_transaksi.id';
+
+        $dir = strtolower((string) ($this->request->getGet('dir') ?? 'asc'));
+        if (! in_array($dir, $allowedDir, true)) {
+            $dir = 'asc';
+        }
+
+        $perPageRaw = $this->request->getGet('per_page');
+        if (is_numeric($perPageRaw)) {
+            $perPage = (int) $perPageRaw;
+        } else {
+            $perPage = (string) $perPageRaw;
+        }
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 100;
+        }
+
+        $page = max((int) ($this->request->getGet('page') ?: 1), 1);
+
+        $builder = $this->model
+            ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
+            ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left');
+
+        $total = $builder->countAllResults(true);
+
+        if ($perPage === 'all') {
+            $rows = $this->model
+                ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left')
+                ->orderBy($sort, $dir)
+                ->findAll();
+            $totalPages = $total > 0 ? 1 : 0;
+            $page       = 1;
+        } else {
+            $offset     = ($page - 1) * (int) $perPage;
+            $rows       = $this->model
+                ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left')
+                ->orderBy($sort, $dir)
+                ->findAll((int) $perPage - 1, $offset);
+            $totalPages = (int) ceil($total / (int) $perPage);
+        }
+
+        return $this->response->setJSON([
+            'rows'        => $rows,
+            'total'       => (int) $total,
+            'page'        => (int) $page,
+            'per_page'    => $perPage === 'all' ? 'all' : (int) $perPage,
+            'total_pages' => (int) $totalPages,
+            'sort'        => $sortKey,
+            'dir'         => $dir,
+        ]);
+    }
+
     public function create()
     {
         $data = [

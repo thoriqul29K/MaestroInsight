@@ -85,6 +85,79 @@ class AnalisisController extends BaseController
         return view('pages/analisis/index', $data);
     }
 
+    public function data()
+    {
+        $sortMap = [
+            'id'              => 'tb_pelanggan.id',
+            'nama_pelanggan'  => 'tb_pelanggan.nama_pelanggan',
+            'recency'         => 'tb_rfm.recency',
+            'frequency'       => 'tb_rfm.frequency',
+            'monetary'        => 'tb_rfm.monetary',
+            'segment'         => 'tb_pelanggan.segment',
+        ];
+        $allowedPerPage = [25, 50, 100, 200, 500, 'all'];
+        $allowedDir     = ['asc', 'desc'];
+
+        $sortKey = (string) ($this->request->getGet('sort') ?? 'id');
+        $sort    = isset($sortMap[$sortKey]) ? $sortMap[$sortKey] : 'tb_pelanggan.id';
+        if (! isset($sortMap[$sortKey])) {
+            $sortKey = 'id';
+        }
+
+        $dir = strtolower((string) ($this->request->getGet('dir') ?? 'asc'));
+        if (! in_array($dir, $allowedDir, true)) {
+            $dir = 'asc';
+        }
+
+        $perPageRaw = $this->request->getGet('per_page');
+        if (is_numeric($perPageRaw)) {
+            $perPage = (int) $perPageRaw;
+        } else {
+            $perPage = (string) $perPageRaw;
+        }
+        if (! in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 100;
+        }
+
+        $page = max((int) ($this->request->getGet('page') ?: 1), 1);
+
+        $selectCols = 'tb_rfm.*, tb_pelanggan.nama_pelanggan, tb_pelanggan.segment, tb_pelanggan.email, tb_pelanggan.telepon';
+
+        $builder = $this->rfmModel
+            ->select($selectCols)
+            ->join('tb_pelanggan', 'tb_pelanggan.id = tb_rfm.id_pelanggan', 'left');
+
+        $total = $builder->countAllResults(true);
+
+        if ($perPage === 'all') {
+            $rows = $this->rfmModel
+                ->select($selectCols)
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_rfm.id_pelanggan', 'left')
+                ->orderBy($sort, $dir)
+                ->findAll();
+            $totalPages = $total > 0 ? 1 : 0;
+            $page       = 1;
+        } else {
+            $offset     = ($page - 1) * (int) $perPage;
+            $rows       = $this->rfmModel
+                ->select($selectCols)
+                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_rfm.id_pelanggan', 'left')
+                ->orderBy($sort, $dir)
+                ->findAll((int) $perPage - 1, $offset);
+            $totalPages = (int) ceil($total / (int) $perPage);
+        }
+
+        return $this->response->setJSON([
+            'rows'        => $rows,
+            'total'       => (int) $total,
+            'page'        => (int) $page,
+            'per_page'    => $perPage === 'all' ? 'all' : (int) $perPage,
+            'total_pages' => (int) $totalPages,
+            'sort'        => $sortKey,
+            'dir'         => $dir,
+        ]);
+    }
+
     public function prosesRFMCluster()
     {
         $timeoutSeconds = (int) (env('CLUSTERING_TIMEOUT', 300));
