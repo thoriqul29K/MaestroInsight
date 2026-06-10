@@ -9,7 +9,7 @@ class AuthController extends BaseController
     public function login()
     {
         if (session()->get('user_id')) {
-            return redirect()->to('/');
+            return redirect()->to('/dashboard');
         }
         return view('pages/login');
     }
@@ -43,12 +43,12 @@ class AuthController extends BaseController
             'isLoggedIn'   => true,
         ]);
 
-        return redirect()->to('/')->with('success', 'Selamat datang, ' . $user['nama_lengkap'] . '!');
+        return redirect()->to('/dashboard')->with('success', 'Selamat datang, ' . $user['nama_lengkap'] . '!');
     }
 
     public function logout()
     {
         session()->destroy();
-        return redirect()->to('/login')->with('success', 'Anda telah keluar.');
+        return redirect()->to('/')->with('success', 'Anda telah keluar.');
     }
 }

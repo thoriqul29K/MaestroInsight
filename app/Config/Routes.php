@@ -7,13 +7,13 @@ use CodeIgniter\Router\RouteCollection;
  */
 
 /* ===== Public (Auth) ===== */
-$routes->get('login',  'AuthController::login');
+$routes->get('/',  'AuthController::login');
 $routes->post('login', 'AuthController::doLogin');
 $routes->get('logout', 'AuthController::logout');
 
 /* ===== Protected (auth filter) ===== */
 $routes->group('', ['filter' => 'auth'], function ($routes) {
-    $routes->get('/',         'DashboardController::index');
+    $routes->get('dashboard',         'DashboardController::index');
 
     $routes->get('pelanggan',                 'PelangganController::index');
     $routes->get('pelanggan/data',            'PelangganController::data');

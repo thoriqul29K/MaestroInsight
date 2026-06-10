@@ -2,7 +2,7 @@
 
 <?= $this->section('main') ?>
 <div class="row">
-    <div class="col-grid">
+    <div class="col-grid stat-grid-dashboard">
         <div class="stat-card stat-primary">
             <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
             <div class="stat-body">
@@ -17,13 +17,6 @@
                 <div class="stat-label">Total Transaksi</div>
             </div>
         </div>
-        <div class="stat-card stat-success">
-            <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
-            <div class="stat-body">
-                <div class="stat-value">Rp <?= number_format($totalPendapatan / 1000000, 1, ',', '.') ?>M</div>
-                <div class="stat-label">Total Pendapatan</div>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -31,7 +24,7 @@
     <div class="col-half">
         <div class="card">
             <div class="card-header">
-                <h2><i class="bi bi-pie-chart"></i> Distribusi Segmentasi</h2>
+                <h2><i class="bi bi-pie-chart"></i> Distribusi Segmen Pelanggan</h2>
             </div>
             <div class="chart-wrapper">
                 <canvas id="chartSegmen"></canvas>
@@ -51,7 +44,7 @@
                             <small><?= esc($t['tujuan']) ?> &middot; <?= esc($t['layanan']) ?></small>
                         </div>
                         <div class="recent-amount">
-                            <span class="amount">Rp <?= number_format($t['jumlah_transaksi'] / 1000, 0, ',', '.') ?>K</span>
+                            <span class="amount">Rp <?= number_format($t['jumlah_transaksi'], 0, ',', '.') ?></span>
                             <small><?= esc(date('d/m/Y', strtotime($t['tanggal_transaksi']))) ?></small>
                         </div>
                     </li>

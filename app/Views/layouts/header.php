@@ -30,7 +30,7 @@ $segment = service('uri')->getSegment(1) ?: 'dashboard';
             </div>
         </a>
         <nav class="topbar-nav">
-            <a href="<?= base_url('/') ?>" class="nav-link <?= $segment === 'dashboard' ? 'active' : '' ?>">
+            <a href="<?= base_url('dashboard') ?>" class="nav-link <?= $segment === 'dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-speedometer2"></i><span>Dashboard</span>
             </a>
             <a href="<?= base_url('pelanggan') ?>" class="nav-link <?= $segment === 'pelanggan' ? 'active' : '' ?>">
