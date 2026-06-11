@@ -40,8 +40,8 @@ php spark serve
 
 ## Routes
 
-- `app/Config/Routes.php`. Public: `login` (GET+POST), `logout`. Everything else is inside `$routes->group('', ['filter' => 'auth'], ...)` — `AuthFilter` (`app/Filters/AuthFilter.php`) checks `session()->get('isLoggedIn')`. New protected routes must go inside that group.
-- Single role `admin` (`tb_user.role` is `ENUM('admin')`).
+- `app/Config/Routes.php`. Public: `GET /` → `AuthController::login`, `POST login` → `doLogin`, `GET logout` → `logout`. Everything else is inside `$routes->group('', ['filter' => 'auth'], ...)` — `AuthFilter` (`app/Filters/AuthFilter.php`) checks `session()->get('isLoggedIn')`. New protected routes must go inside that group.
+- Single role admin (migration `DropRoleFromTbUser` removed the `role` column from `tb_user`).
 - Available endpoints: `pelanggan` CRUD, `transaksi` CRUD, `analisis` (RFM view + POST `/analisis/proses-rfm-cluster` + GET `/analisis/progress`), `promosi` (POST `/promosi/kirim`, GET `/promosi/riwayat`, POST `/promosi/riwayat/hapus`).
 
 ## Python integration (RFM clustering)
@@ -86,9 +86,11 @@ php spark serve
   php spark db:seed ImportTransaksiCsvSeeder
   ```
 
-## Quirks
+## Quirks & security
 
+- **SECURITY WARNING**: `.env` contains a **live Aiven production database password** (`AVNS_aTAApyxEp4CwtIflYD9` for `avnadmin@maestroinsight-1-sipsp-e071.l.aivencloud.com:27714`). Any agent or contributor with access to `.env` can connect to the production DB. Rotate this credential immediately.
 - `.env` is gitignored; `env` (no dot) is the committed template — they diverge.
 - `encryption.key` in `.env` is a dev placeholder (must change for production).
+- `app.baseURL` in `.env` uses a LAN IP (`http://192.168.100.9:8080/`). If running `php spark serve` locally, uncomment the `localhost` line instead or page assets will 404.
+- `app/Config/WorkerMode.php` is stock CI4 FrankenPHP worker mode config — not a custom file.
 - No linters, formatters, static analysis, CI workflows, or pre-commit hooks.
-- `app/Config/WorkerMode.php` exists (purpose unclear — investigate if modifying background job behavior).

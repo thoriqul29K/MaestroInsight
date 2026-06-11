@@ -23,7 +23,6 @@ final class UserModelTest extends CIUnitTestCase
         $user = $this->model->findByUsername('admin');
         $this->assertIsArray($user);
         $this->assertSame('admin', $user['username']);
-        $this->assertSame('admin', $user['role']);
     }
 
     public function testFindByUsernameReturnsNullForUnknownUser(): void

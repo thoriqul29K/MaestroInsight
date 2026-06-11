@@ -47,7 +47,6 @@ $segment = service('uri')->getSegment(1) ?: 'dashboard';
             </a>
         </nav>
         <div class="topbar-user">
-            <i class="bi bi-person-circle"></i>
             <span class="topbar-user-name"><?= esc($namaLengkap) ?></span>
             <a href="<?= base_url('logout') ?>" class="btn-logout"><i class="bi bi-box-arrow-right"></i> <span class="logout-label">Keluar</span></a>
         </div>

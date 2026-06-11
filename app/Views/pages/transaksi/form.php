@@ -26,19 +26,19 @@
             <div class="form-group">
                 <label for="tanggal_transaksi">Tanggal Transaksi *</label>
                 <input type="date" id="tanggal_transaksi" name="tanggal_transaksi"
-                       value="<?= old('tanggal_transaksi', $transaksi['tanggal_transaksi'] ?? date('Y-m-d')) ?>" required>
+                    value="<?= old('tanggal_transaksi', $transaksi['tanggal_transaksi'] ?? date('Y-m-d')) ?>" required>
             </div>
             <div class="form-group">
                 <label>Layanan</label>
                 <?php $_layanan = old('layanan', isset($transaksi['layanan']) ? explode(',', $transaksi['layanan']) : []); ?>
                 <div class="checkbox-group">
                     <?php foreach (['Dokumen', 'Cruise', 'Tour', 'Hotel', 'Transport', 'Ticket'] as $_opt): ?>
-                    <label class="checkbox-inline">
-                        <input type="checkbox" name="layanan[]" value="<?= $_opt ?>"
-                            <?= in_array($_opt, is_array($_layanan) ? $_layanan : []) ? 'checked' : '' ?>>
-                        <i class="bi bi-check-circle-fill check-icon"></i>
-                        <?= $_opt ?>
-                    </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="layanan[]" value="<?= $_opt ?>"
+                                <?= in_array($_opt, is_array($_layanan) ? $_layanan : []) ? 'checked' : '' ?>>
+                            <i class="bi bi-check-circle-fill check-icon"></i>
+                            <?= $_opt ?>
+                        </label>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -47,12 +47,12 @@
             <div class="form-group">
                 <label for="tujuan">Tujuan *</label>
                 <input type="text" id="tujuan" name="tujuan"
-                       value="<?= old('tujuan', $transaksi['tujuan'] ?? '') ?>" required>
+                    value="<?= old('tujuan', $transaksi['tujuan'] ?? '') ?>" required>
             </div>
             <div class="form-group">
                 <label for="jumlah_transaksi">Jumlah (Rp) *</label>
                 <input type="number" id="jumlah_transaksi" name="jumlah_transaksi" min="0"
-                       value="<?= old('jumlah_transaksi', $transaksi['jumlah_transaksi'] ?? '') ?>" required>
+                    value="<?= old('jumlah_transaksi', $transaksi['jumlah_transaksi'] ?? '') ?>" required>
             </div>
         </div>
         <div class="form-group">
