@@ -6,6 +6,14 @@ use App\Models\UserModel;
 
 class AuthController extends BaseController
 {
+
+    protected UserModel $userModel;
+
+    public function __construct()
+    {
+        $this->userModel = new UserModel();
+    }
+
     public function login()
     {
         if (session()->get('user_id')) {
@@ -28,8 +36,7 @@ class AuthController extends BaseController
         $username = $this->request->getPost('username');
         $password = $this->request->getPost('password');
 
-        $userModel = new UserModel();
-        $user      = $userModel->findByUsername($username);
+        $user      = $this->userModel->findByUsername($username);
 
         if (! $user || ! password_verify($password, $user['password'])) {
             return redirect()->back()->withInput()->with('error', 'Username atau password salah.');
