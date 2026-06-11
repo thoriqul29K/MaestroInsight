@@ -8,13 +8,20 @@ use App\Models\RfmModel;
 
 class DashboardController extends BaseController
 {
+    protected PelangganModel $pelanggan;
+    protected TransaksiModel $transaksi;
+    protected RfmModel $rfm;
+
+    public function __construct()
+    {
+        $this->pelanggan = new PelangganModel();
+        $this->transaksi = new TransaksiModel();
+        $this->rfm       = new RfmModel();
+    }
     public function index()
     {
-        $pelanggan = new PelangganModel();
-        $transaksi = new TransaksiModel();
-        $rfm       = new RfmModel();
 
-        $segmen = $pelanggan->countBySegment();
+        $segmen = $this->pelanggan->countBySegment();
         $totalPelanggan = array_sum($segmen);
 
         $db = \Config\Database::connect();
@@ -29,7 +36,7 @@ class DashboardController extends BaseController
             'totalTransaksi'  => $totalTransaksi,
             'totalPendapatan' => $totalPendapatan,
             'segmen'          => $segmen,
-            'transaksiBaru'   => $transaksi->getRecent(5),
+            'transaksiBaru'   => $this->transaksi->getRecent(5),
         ];
         return view('pages/dashboard', $data);
     }
