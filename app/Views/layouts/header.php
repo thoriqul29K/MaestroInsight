@@ -14,7 +14,7 @@ $segment = service('uri')->getSegment(1) ?: 'dashboard';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <link rel="icon" type="image/x-icon" href="<?= base_url('assets/img/favicon.ico') ?>">
+    <link rel="icon" type="image/x-icon" href="<?= base_url('assets/img/maestro-logo-640x640.jpg') ?>">
 </head>
 
 <body>

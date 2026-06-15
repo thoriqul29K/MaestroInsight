@@ -7,7 +7,7 @@
     <title>Login | MaestroInsight</title>
     <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/login.css') ?>">
-    <link rel="icon" type="image/x-icon" href="<?= base_url('assets/img/favicon.ico') ?>">
+    <link rel="icon" type="image/x-icon" href="<?= base_url('assets/img/maestro-logo-640x640.jpg') ?>">
 </head>
 
 <body class="login-body">
