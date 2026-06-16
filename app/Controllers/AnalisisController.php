@@ -250,8 +250,6 @@ class AnalisisController extends BaseController
         $this->logClustering("Timed out: " . var_export($result['timed_out'], true));
 
         if ($result['timed_out']) {
-            @unlink($in);
-            @unlink($out);
             $this->logClustering("ERROR: clustering timeout");
             return [
                 'error' => "Clustering memakan waktu lebih dari {$timeoutSeconds} detik dan dihentikan otomatis. Coba perkecil dataset atau naikkan CLUSTERING_TIMEOUT di .env.",
@@ -272,9 +270,6 @@ class AnalisisController extends BaseController
         $this->writeProgress(85, 'clustering', 'Mengimpor hasil segmentasi...');
         $count = $this->rfm->importSegmentResults($out);
         $this->logClustering("Import selesai. count={$count}");
-
-        @unlink($in);
-        @unlink($out);
 
         $this->writeProgress(95, 'clustering', "Berhasil mensegmentasi {$count} pelanggan.");
 
