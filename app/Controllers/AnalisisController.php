@@ -208,30 +208,19 @@ class AnalisisController extends BaseController
         $in  = $writable . DIRECTORY_SEPARATOR . 'rfm_input.csv';
         $out = $writable . DIRECTORY_SEPARATOR . 'rfm_output.csv';
 
-        $this->logClustering("=== Mulai runClustering (timeout={$timeoutSeconds}s) ===");
-        $this->logClustering("Path input  : {$in}");
-        $this->logClustering("Path output : {$out}");
-
         $exported = $this->rfm->exportToCSV($in);
         if (! $exported || ! is_file($in)) {
-            $this->logClustering("ERROR: export CSV gagal. exported=" . var_export($exported, true) . ", exists=" . var_export(is_file($in), true));
-            $logPath = $this->getClusteringLogPath();
             return [
-                'error' => "Gagal mengekspor data RFM ke CSV. Cek log: {$logPath}",
+                'error' => 'Gagal mengekspor data RFM ke CSV.',
             ];
         }
-        $this->logClustering("Export OK. Ukuran: " . filesize($in) . " bytes");
         $this->writeProgress(50, 'clustering', 'Data diekspor. Menjalankan Python hierarchical clustering...');
 
         $python = $this->findPython();
         $script = ROOTPATH . 'app' . DIRECTORY_SEPARATOR . 'Libraries' . DIRECTORY_SEPARATOR . 'clustering.py';
 
-        $this->logClustering("Python: " . ($python ?: 'TIDAK DITEMUKAN'));
-        $this->logClustering("Script: {$script} (exists=" . var_export(file_exists($script), true) . ')');
-
         if (! $python || ! file_exists($script)) {
             @unlink($in);
-            $this->logClustering("ERROR: Python atau script tidak ditemukan");
             return ['error' => 'Python atau script clustering tidak ditemukan.'];
         }
 
@@ -243,14 +232,10 @@ class AnalisisController extends BaseController
             . ' ' . escapeshellarg((string) $timeoutSeconds)
             . ' 2>&1';
 
-        $this->logClustering("Command: {$cmd}");
         $result = $this->runWithTimeout($cmd, $timeoutSeconds);
         $output = $result['output'];
-        $this->logClustering("Python output (" . strlen($output) . " chars):\n" . $output);
-        $this->logClustering("Timed out: " . var_export($result['timed_out'], true));
 
         if ($result['timed_out']) {
-            $this->logClustering("ERROR: clustering timeout");
             return [
                 'error' => "Clustering memakan waktu lebih dari {$timeoutSeconds} detik dan dihentikan otomatis. Coba perkecil dataset atau naikkan CLUSTERING_TIMEOUT di .env.",
             ];
@@ -258,38 +243,17 @@ class AnalisisController extends BaseController
 
         if (! file_exists($out)) {
             @unlink($in);
-            $this->logClustering("ERROR: output file tidak dibuat oleh Python");
-            $logPath = $this->getClusteringLogPath();
             $snippet = trim($output) !== '' ? substr($output, 0, 500) : '(kosong)';
             return [
-                'error' => "Gagal menjalankan clustering. Output Python: {$snippet}. Log lengkap: {$logPath}",
+                'error' => "Gagal menjalankan clustering. Output Python: {$snippet}",
             ];
         }
-        $this->logClustering("Output file OK. Ukuran: " . filesize($out) . " bytes");
-
         $this->writeProgress(85, 'clustering', 'Mengimpor hasil segmentasi...');
         $count = $this->rfm->importSegmentResults($out);
-        $this->logClustering("Import selesai. count={$count}");
 
         $this->writeProgress(95, 'clustering', "Berhasil mensegmentasi {$count} pelanggan.");
 
         return ['count' => $count];
-    }
-
-    private function logClustering(string $message): void
-    {
-        $logDir = WRITEPATH . 'logs';
-        if (! is_dir($logDir)) {
-            @mkdir($logDir, 0755, true);
-        }
-        $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
-        @file_put_contents($this->getClusteringLogPath(), $line, FILE_APPEND | LOCK_EX);
-        log_message('info', $message);
-    }
-
-    private function getClusteringLogPath(): string
-    {
-        return WRITEPATH . 'logs' . DIRECTORY_SEPARATOR . 'clustering_debug-' . date('Y-m-d') . '.log';
     }
 
     private function writeProgress(int $percent, string $stage, string $detail): void

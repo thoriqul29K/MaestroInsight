@@ -48,8 +48,8 @@ php spark serve
 
 - `app/Libraries/clustering.py` is invoked by `AnalisisController::prosesRFMCluster` via `shell_exec`. Do not rename or move either without updating the other.
 - Required: `pip install pandas numpy scipy scikit-learn pymysql`. The interpreter (`python`/`python3`/`py`) must be on PATH — probed in that order by `findPython()`.
-- Flow: `RfmService::exportToCSV()` writes `writable/uploads/rfm_input.csv` → Python reads it, runs Ward linkage (Euclidean, 5 clusters), writes `writable/uploads/rfm_output.csv` → `importSegmentResults()` updates `tb_pelanggan.segment`.
-- **Segments (5)**: `Loyal`, `Potential`, `Budget Hunter`, `Seasonal`, `At Risk` — assigned by ranking cluster means on monetary value.
+- Flow: `RfmService::exportToCSV()` writes `writable/uploads/rfm_input.csv` → Python reads it, runs Ward linkage (Euclidean, 5 clusters), writes `writable/uploads/rfm_output.csv` → `importSegmentResults()` updates `tb_pelanggan.segment` and writes normalized RFM values back to `tb_rfm`.
+- **Segments (5)**: `Loyal`, `Potential`, `Budget Hunter`, `Seasonal`, `At Risk` — assigned by ranking cluster means on monetary value. DB values are lowercase: `loyal`, `potential`, `budget`, `seasonal`, `at_risk`.
 - **Destructive**: `RfmService::hitungRFM()` does `$this->rfm->db->table('tb_rfm')->truncate()` then re-inserts. Don't call it during concurrent reads of `tb_rfm`. Not safe on production DB without backups.
 - 5-min timeout (`CLUSTERING_TIMEOUT` in `.env`, default 300s). Progress written to `writable/uploads/clustering_progress.json` (polled by GET `/analisis/progress`). Debug log at `writable/logs/clustering_debug-YYYY-MM-DD.log`.
 - `clustering.py` also supports a `--db` mode (reads directly from MySQL via `pymysql`); currently unused — PHP uses CSV round-trip.
@@ -61,7 +61,7 @@ php spark serve
 
 ## Testing
 
-- `phpunit.xml` (gitignored) already exists locally, overriding tests to use `localhost/db_maestrocrm` with MySQLi. Without it, tests fall back to the framework's SQLite3 in-memory defaults, which fail because `sqlite3` is not installed.
+- `phpunit.xml` (gitignored) already exists locally, overriding tests to use `localhost/db_maestrocrm` with MySQLi. Without it, tests fall back to the framework's SQLite3 in-memory defaults, which fail because `sqlite3` is not installed. New devs: copy `phpunit.dist.xml` to `phpunit.xml` and uncomment/set the `<env name="database.tests.*">` block.
 - Tests use the **same MySQL DB as development**. Do not run against production.
 - Every test class extending `CIUnitTestCase` **must** set:
   ```php
@@ -91,6 +91,6 @@ php spark serve
 - **SECURITY WARNING**: `.env` contains a **live Aiven production database password** (`AVNS_aTAApyxEp4CwtIflYD9` for `avnadmin@maestroinsight-1-sipsp-e071.l.aivencloud.com:27714`). Any agent or contributor with access to `.env` can connect to the production DB. Rotate this credential immediately.
 - `.env` is gitignored; `env` (no dot) is the committed template — they diverge.
 - `encryption.key` in `.env` is a dev placeholder (must change for production).
-- `app.baseURL` in `.env` uses a LAN IP (`http://192.168.100.9:8080/`). If running `php spark serve` locally, uncomment the `localhost` line instead or page assets will 404.
+- `app.baseURL` in `.env`: the LAN IP (`http://192.168.100.9:8080/`) line is commented out; `localhost:8080` is active. If deploying to a LAN, swap which line is uncommented or assets will 404.
 - `app/Config/WorkerMode.php` is stock CI4 FrankenPHP worker mode config — not a custom file.
 - No linters, formatters, static analysis, CI workflows, or pre-commit hooks.

@@ -33,9 +33,6 @@ class RfmService
 
         $rows = $db->query($sql)->getResultArray();
 
-        $recencies  = [];
-        $frequencies = [];
-        $monetaries = [];
         $data = [];
 
         foreach ($rows as $r) {
@@ -49,19 +46,11 @@ class RfmService
                 'frequency'    => (int) $r['frequency'],
                 'monetary'     => (int) $r['monetary'],
             ];
-
-            $recencies[]   = $recency;
-            $frequencies[] = (int) $r['frequency'];
-            $monetaries[]  = (int) $r['monetary'];
         }
 
         if (empty($data)) {
             return ['status' => 'empty', 'count' => 0];
         }
-
-        $rMin = min($recencies); $rMax = max($recencies);
-        $fMin = min($frequencies); $fMax = max($frequencies);
-        $mMin = min($monetaries); $mMax = max($monetaries);
 
         $this->rfm->db->table('tb_rfm')->truncate();
 
@@ -69,14 +58,11 @@ class RfmService
         $now = date('Y-m-d H:i:s');
         foreach ($data as $d) {
             $insertData[] = [
-                'id_pelanggan'   => $d['id_pelanggan'],
-                'recency'        => $d['recency'],
-                'frequency'      => $d['frequency'],
-                'monetary'       => $d['monetary'],
-                'recency_norm'   => $this->normalize($d['recency'], $rMin, $rMax),
-                'frequency_norm' => $this->normalize($d['frequency'], $fMin, $fMax),
-                'monetary_norm'  => $this->normalize($d['monetary'], $mMin, $mMax),
-                'created_at'     => $now,
+                'id_pelanggan' => $d['id_pelanggan'],
+                'recency'      => $d['recency'],
+                'frequency'    => $d['frequency'],
+                'monetary'     => $d['monetary'],
+                'created_at'   => $now,
             ];
         }
 
@@ -88,14 +74,6 @@ class RfmService
         ];
     }
 
-    private function normalize(float $val, float $min, float $max): float
-    {
-        if ($max == $min) {
-            return 0.0;
-        }
-        return round(($val - $min) / ($max - $min), 6);
-    }
-
     public function exportToCSV(string $path): bool
     {
         $data = $this->rfm->findAll();
@@ -103,15 +81,12 @@ class RfmService
         $dir = dirname($path);
         if (! is_dir($dir)) {
             if (! @mkdir($dir, 0755, true) && ! is_dir($dir)) {
-                log_message('error', "[RfmService::exportToCSV] Gagal membuat direktori: {$dir}");
                 return false;
             }
         }
 
         $fh = @fopen($path, 'w');
         if ($fh === false) {
-            $err = error_get_last()['message'] ?? 'unknown';
-            log_message('error', "[RfmService::exportToCSV] Gagal membuka file untuk ditulis: {$path}. Error: {$err}");
             return false;
         }
 
@@ -122,7 +97,6 @@ class RfmService
         fclose($fh);
 
         if (! is_file($path) || filesize($path) === 0) {
-            log_message('error', "[RfmService::exportToCSV] File CSV kosong/tidak ada setelah tulis: {$path}");
             return false;
         }
 
@@ -138,15 +112,36 @@ class RfmService
             return 0;
         }
         $header = fgetcsv($fh);
+        $hasNorm = in_array('recency_norm', $header, true)
+            && in_array('frequency_norm', $header, true)
+            && in_array('monetary_norm', $header, true);
+
         while (($row = fgetcsv($fh)) !== false) {
             $data = array_combine($header, $row);
+            $idPelanggan = (int) ($data['id_pelanggan'] ?? 0);
+            if ($idPelanggan <= 0) {
+                continue;
+            }
+
             $segment = $data['segment'] ?? null;
             if (! in_array($segment, ['loyal', 'potential', 'budget', 'seasonal', 'at_risk'], true)) {
                 $segment = null;
             }
             $db->table('tb_pelanggan')
-                ->where('id', $data['id_pelanggan'])
+                ->where('id', $idPelanggan)
                 ->update(['segment' => $segment]);
+
+            if ($hasNorm) {
+                $normUpdate = [
+                    'recency_norm'   => (float) ($data['recency_norm']   ?? 0),
+                    'frequency_norm' => (float) ($data['frequency_norm'] ?? 0),
+                    'monetary_norm'  => (float) ($data['monetary_norm']  ?? 0),
+                ];
+                $db->table('tb_rfm')
+                    ->where('id_pelanggan', $idPelanggan)
+                    ->update($normUpdate);
+            }
+
             $count++;
         }
         fclose($fh);

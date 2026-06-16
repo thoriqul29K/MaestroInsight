@@ -38,8 +38,6 @@ final class RfmServiceTest extends CIUnitTestCase
 
         $this->assertGreaterThanOrEqual(0, $row->frequency);
         $this->assertGreaterThanOrEqual(0, $row->monetary);
-        $this->assertGreaterThanOrEqual(0, $row->recency_norm);
-        $this->assertLessThanOrEqual(1, $row->recency_norm);
     }
 
     public function testExportToCSV(): void

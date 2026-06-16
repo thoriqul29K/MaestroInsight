@@ -118,22 +118,19 @@ def hierarchical_cluster(features, n_clusters=5, method='ward', metric='euclidea
     return Z, labels
 
 
-def label_segments(df, labels, n_clusters=5):
+def label_segments(df, labels, features=None, n_clusters=5):
     """Label cluster menjadi nama segmen berdasarkan profil RFM."""
     df = df.copy()
     df['cluster_raw'] = labels
 
+    if features is not None:
+        df['recency_norm']   = features[:, 0]
+        df['frequency_norm'] = features[:, 1]
+        df['monetary_norm']  = features[:, 2]
+
     cluster_means = df.groupby('cluster_raw')[['recency', 'frequency', 'monetary']].mean()
 
     sorted_by_monetary = cluster_means.sort_values('monetary', ascending=False).index.tolist()
-
-    segment_names = {
-        'loyal':     'Loyal',
-        'potential': 'Potential',
-        'budget':    'Budget Hunter',
-        'seasonal':  'Seasonal',
-        'at_risk':   'At Risk',
-    }
 
     if len(sorted_by_monetary) < n_clusters:
         for i in range(len(sorted_by_monetary), n_clusters):
@@ -175,7 +172,11 @@ def label_segments(df, labels, n_clusters=5):
         }
 
     df['segment'] = df['cluster_raw'].map(mapping)
-    return df[['id_pelanggan', 'segment']]
+    cols = ['id_pelanggan']
+    if features is not None:
+        cols.extend(['recency_norm', 'frequency_norm', 'monetary_norm'])
+    cols.append('segment')
+    return df[cols]
 
 
 def write_output(df, path):
@@ -240,7 +241,8 @@ def main():
 
         if df.empty:
             print(json.dumps({'status': 'empty', 'count': 0}), flush=True)
-            write_output(pd.DataFrame(columns=['id_pelanggan', 'segment']), output_csv)
+            empty = pd.DataFrame(columns=['id_pelanggan', 'recency_norm', 'frequency_norm', 'monetary_norm', 'segment'])
+            write_output(empty, output_csv)
             sys.exit(0)
 
         features, _ = normalize(df)
@@ -249,7 +251,7 @@ def main():
             n_clusters=5,
             timeout_seconds=timeout_seconds,
         )
-        result = label_segments(df, labels, n_clusters=5)
+        result = label_segments(df, labels, features=features, n_clusters=5)
         write_output(result, output_csv)
 
         summary = result['segment'].value_counts().to_dict()
