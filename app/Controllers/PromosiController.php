@@ -34,6 +34,7 @@ class PromosiController extends BaseController
     public function data()
     {
         $allowedSegments = ['loyal', 'potential', 'budget', 'seasonal', 'at_risk'];
+        $allowedAgama    = ['Islam', 'Kristen', 'Katolik', 'Buddha', 'Hindu', 'Lainnya'];
         $allowedPerPage  = [25, 50, 100, 'all'];
         $allowedSort     = [
             'no'      => 'id',
@@ -44,10 +45,11 @@ class PromosiController extends BaseController
         ];
         $allowedDir = ['asc', 'desc'];
 
-        $segment = (string) ($this->request->getGet('segment') ?? '');
-        if (! in_array($segment, $allowedSegments, true)) {
-            $segment = '';
-        }
+        $rawSegments = (array) $this->request->getGet('segment');
+        $segments   = array_values(array_unique(array_intersect($rawSegments, $allowedSegments)));
+
+        $rawAgama = (array) $this->request->getGet('agama');
+        $agama    = array_values(array_unique(array_intersect($rawAgama, $allowedAgama)));
 
         $perPageRaw = $this->request->getGet('per_page');
         if (is_numeric($perPageRaw)) {
@@ -70,8 +72,11 @@ class PromosiController extends BaseController
         $page = max((int) ($this->request->getGet('page') ?: 1), 1);
 
         $base = $this->model;
-        if ($segment !== '') {
-            $base = $base->where('segment', $segment);
+        if (! empty($segments)) {
+            $base = $base->whereIn('segment', $segments);
+        }
+        if (! empty($agama)) {
+            $base = $base->whereIn('agama', $agama);
         }
 
         $total = $base->countAllResults(false);

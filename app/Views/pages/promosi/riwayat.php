@@ -8,7 +8,6 @@ $startNum = ($perPage === 'all') ? 1 : (($_page - 1) * (int) $perPage + 1);
 
 <?= $this->section('main') ?>
 <?php $filterStatus ??= '';
-$filterChannel ??= '';
 $hasFilter ??= false; ?>
 <div class="card">
     <div class="card-header">
@@ -25,16 +24,6 @@ $hasFilter ??= false; ?>
                     <option value="">-- Semua --</option>
                     <option value="success" <?= $filterStatus === 'success' ? 'selected' : '' ?>>Berhasil</option>
                     <option value="failed" <?= $filterStatus === 'failed'  ? 'selected' : '' ?>>Gagal</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="channel">Channel</label>
-                <select id="channel" name="channel" onchange="this.form.submit()">
-                    <option value="">-- Semua --</option>
-                    <option value="email" <?= $filterChannel === 'email'     ? 'selected' : '' ?>>Email</option>
-                    <option value="whatsapp" <?= $filterChannel === 'whatsapp'  ? 'selected' : '' ?>>WhatsApp</option>
-                    <option value="telegram" <?= $filterChannel === 'telegram'  ? 'selected' : '' ?>>Telegram</option>
-                    <option value="sms" <?= $filterChannel === 'sms'       ? 'selected' : '' ?>>SMS</option>
                 </select>
             </div>
             <?php if ($hasFilter): ?>
@@ -74,7 +63,7 @@ $hasFilter ??= false; ?>
         <div class="table-toolbar">
             <div class="per-page-selector">
                 <label>Baris per halaman:</label>
-                <select onchange="location.href='?'+this.value+'&status=<?= $filterStatus ?>&channel=<?= $filterChannel ?>'"
+                <select onchange="location.href='?'+this.value+'&status=<?= $filterStatus ?>'"
                     class="form-select per-page-select">
                     <option value="per_page=25" <?= $perPage == 25 ? 'selected' : '' ?>>25</option>
                     <option value="per_page=50" <?= $perPage == 50 ? 'selected' : '' ?>>50</option>

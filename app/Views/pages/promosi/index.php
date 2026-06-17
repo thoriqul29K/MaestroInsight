@@ -10,9 +10,8 @@ $selected ??= ''; ?>
     <div class="filter-form">
         <div class="form-row">
             <div class="form-group">
-                <label for="segment">Segmentasi</label>
-                <select id="segment" name="segment">
-                    <option value="">-- Semua Segment --</option>
+                <label>Segmentasi</label>
+                <div class="checkbox-group" id="segmentGroup">
                     <?php
                     $segments = [
                         'loyal'     => 'Loyal',
@@ -23,18 +22,28 @@ $selected ??= ''; ?>
                     ];
                     foreach ($segments as $val => $label):
                     ?>
-                        <option value="<?= $val ?>" <?= $selected === $val ? 'selected' : '' ?>><?= $label ?></option>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="segment[]" value="<?= $val ?>" checked>
+                            <i class="bi bi-check-circle-fill check-icon"></i>
+                            <?= $label ?>
+                        </label>
                     <?php endforeach; ?>
-                </select>
+                </div>
             </div>
             <div class="form-group">
-                <label for="perPage">Tampilkan</label>
-                <select id="perPage" name="per_page">
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100" selected>100</option>
-                    <option value="all">Semua</option>
-                </select>
+                <label>Agama</label>
+                <div class="checkbox-group" id="agamaGroup">
+                    <?php
+                    $agamaList = ['Islam', 'Kristen', 'Katolik', 'Buddha', 'Hindu', 'Lainnya'];
+                    foreach ($agamaList as $a):
+                    ?>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="agama[]" value="<?= $a ?>" checked>
+                            <i class="bi bi-check-circle-fill check-icon"></i>
+                            <?= $a ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -49,15 +58,7 @@ $selected ??= ''; ?>
     </div>
     <form action="<?= base_url('promosi/kirim') ?>" method="post" id="formPromosi" class="form" enctype="multipart/form-data">
         <?= csrf_field() ?>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="channel">Kanal Pengiriman *</label>
-                <select id="channel" name="channel" required>
-                    <option value="email" selected>Email</option>
-                    <option value="whatsapp" disabled>WhatsApp (Dalam Pengembangan)</option>
-                </select>
-            </div>
-        </div>
+        <input type="hidden" name="channel" value="email">
         <div class="form-group">
             <label for="subject">Subjek Email *</label>
             <input type="text" id="subject" name="subject" required maxlength="255"
@@ -70,9 +71,8 @@ $selected ??= ''; ?>
             <small class="hint">Gunakan <code>{nama}</code> (nama lengkap) dan <code>{segmen}</code> untuk personalisasi otomatis.</small>
         </div>
         <div class="form-group">
-            <label for="gambar">Lampiran Gambar (Opsional)</label>
+            <label for="gambar">Lampiran Gambar</label>
             <input type="file" id="gambar" name="gambar" accept="image/jpeg,image/png,image/gif,image/webp">
-            <small class="hint">Format: JPG, PNG, GIF, WebP. Maks. 5MB.</small>
             <div id="imagePreview" class="image-preview" hidden>
                 <img id="previewImg" src="" alt="Preview">
                 <button type="button" class="btn btn-sm btn-secondary" id="removeImage">
@@ -82,8 +82,21 @@ $selected ??= ''; ?>
         </div>
 
         <h3>Daftar Pelanggan</h3>
-        <div class="table-info">
-            <span id="rowCounter" class="row-counter">Memuat…</span>
+        <div class="table-toolbar">
+            <div class="per-page-selector">
+                <label>Baris per halaman:</label>
+                <select id="perPage" class="form-select per-page-select">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                    <option value="all">Semua</option>
+                </select>
+            </div>
+            <div class="pagination-info">
+                <span id="rowCounter" class="row-counter">Memuat…</span>
+            </div>
         </div>
         <div class="table-wrapper">
             <table class="data-table">
@@ -148,12 +161,6 @@ $selected ??= ''; ?>
 
     .image-preview[hidden] {
         display: none;
-    }
-
-    .table-info {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 8px;
     }
 
     .row-counter {
@@ -249,7 +256,8 @@ $selected ??= ''; ?>
     }
 
     const state = {
-        segment: document.getElementById('segment').value || '',
+        segment: new Set(['loyal', 'potential', 'budget', 'seasonal', 'at_risk']),
+        agama: new Set(['Islam', 'Kristen', 'Katolik', 'Buddha', 'Hindu', 'Lainnya']),
         perPage: document.getElementById('perPage').value || '50',
         page: 1,
         sort: 'no',
@@ -264,7 +272,6 @@ $selected ??= ''; ?>
     const counterEl = document.getElementById('rowCounter');
     const pagerEl = document.getElementById('pagerNav');
     const checkAllEl = document.getElementById('checkAll');
-    const segmentEl = document.getElementById('segment');
     const perPageEl = document.getElementById('perPage');
 
     function collectChecked() {
@@ -367,13 +374,24 @@ $selected ??= ''; ?>
     }
 
     async function fetchPelanggan() {
+        if (state.segment.size === 0 || state.agama.size === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Tidak ada pelanggan pada filter ini.</td></tr>';
+            counterEl.textContent = '0 pelanggan';
+            pagerEl.innerHTML = '';
+            checkAllEl.checked = false;
+            checkAllEl.disabled = true;
+            state.total = 0;
+            state.totalPages = 0;
+            return;
+        }
         const params = new URLSearchParams({
-            segment: state.segment,
             per_page: state.perPage,
             page: state.page,
             sort: state.sort,
             dir: state.dir,
         });
+        state.segment.forEach(s => params.append('segment[]', s));
+        state.agama.forEach(a => params.append('agama[]', a));
         try {
             const res = await fetch(`<?= base_url('promosi/data') ?>?${params.toString()}`, {
                 headers: {
@@ -396,10 +414,22 @@ $selected ??= ''; ?>
         }
     }
 
-    segmentEl.addEventListener('change', () => {
-        state.segment = segmentEl.value;
-        state.page = 1;
-        fetchPelanggan();
+    document.querySelectorAll('#segmentGroup .checkbox-inline input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (cb.checked) state.segment.add(cb.value);
+            else state.segment.delete(cb.value);
+            state.page = 1;
+            fetchPelanggan();
+        });
+    });
+
+    document.querySelectorAll('#agamaGroup .checkbox-inline input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (cb.checked) state.agama.add(cb.value);
+            else state.agama.delete(cb.value);
+            state.page = 1;
+            fetchPelanggan();
+        });
     });
 
     perPageEl.addEventListener('change', () => {
