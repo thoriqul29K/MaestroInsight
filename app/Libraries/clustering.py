@@ -128,39 +128,39 @@ def label_segments(df, labels, features=None, n_clusters=5):
         df['frequency_norm'] = features[:, 1]
         df['monetary_norm']  = features[:, 2]
 
-    cluster_means = df.groupby('cluster_raw')[['recency', 'frequency', 'monetary']].mean()
+    df['composite_score'] = (1 - df['recency_norm']) + df['frequency_norm'] + df['monetary_norm']
+    composite_means = df.groupby('cluster_raw')['composite_score'].mean()
+    sorted_by_composite = composite_means.sort_values(ascending=False).index.tolist()
 
-    sorted_by_monetary = cluster_means.sort_values('monetary', ascending=False).index.tolist()
+    if len(sorted_by_composite) < n_clusters:
+        for i in range(len(sorted_by_composite), n_clusters):
+            sorted_by_composite.append(i)
 
-    if len(sorted_by_monetary) < n_clusters:
-        for i in range(len(sorted_by_monetary), n_clusters):
-            sorted_by_monetary.append(i)
+    n = len(sorted_by_composite)
 
-    n = len(sorted_by_monetary)
-
-    loyal_idx       = sorted_by_monetary[0]
-    potential_idx   = sorted_by_monetary[1] if n > 1 else loyal_idx
-    at_risk_idx     = sorted_by_monetary[-1]
-    budget_idx      = sorted_by_monetary[-2] if n > 2 else at_risk_idx
-    seasonal_idx    = sorted_by_monetary[2] if n > 3 else (sorted_by_monetary[2] if n == 4 else at_risk_idx)
+    loyal_idx       = sorted_by_composite[0]
+    potential_idx   = sorted_by_composite[1] if n > 1 else loyal_idx
+    at_risk_idx     = sorted_by_composite[-1]
+    budget_idx      = sorted_by_composite[-2] if n > 2 else at_risk_idx
+    seasonal_idx    = sorted_by_composite[2] if n > 3 else (sorted_by_composite[2] if n == 4 else at_risk_idx)
 
     if n == 4:
         mapping = {
-            sorted_by_monetary[0]: 'loyal',
-            sorted_by_monetary[1]: 'potential',
-            sorted_by_monetary[2]: 'seasonal',
-            sorted_by_monetary[3]: 'at_risk',
+            sorted_by_composite[0]: 'loyal',
+            sorted_by_composite[1]: 'potential',
+            sorted_by_composite[2]: 'seasonal',
+            sorted_by_composite[3]: 'at_risk',
         }
     elif n == 3:
         mapping = {
-            sorted_by_monetary[0]: 'loyal',
-            sorted_by_monetary[1]: 'potential',
-            sorted_by_monetary[2]: 'at_risk',
+            sorted_by_composite[0]: 'loyal',
+            sorted_by_composite[1]: 'potential',
+            sorted_by_composite[2]: 'at_risk',
         }
     elif n == 2:
         mapping = {
-            sorted_by_monetary[0]: 'loyal',
-            sorted_by_monetary[1]: 'at_risk',
+            sorted_by_composite[0]: 'loyal',
+            sorted_by_composite[1]: 'at_risk',
         }
     else:
         mapping = {
