@@ -475,10 +475,6 @@ $selected ??= ''; ?>
                 modal.close();
             } else if (action === 'confirm') {
                 modal.close();
-                document.querySelectorAll('.chk-pelanggan').forEach(cb => {
-                    cb.checked = false;
-                });
-                checkedIds.clear();
                 form.submit();
             }
         });
