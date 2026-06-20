@@ -1,7 +1,9 @@
 <?php
 $session = session();
 $namaLengkap = $session->get('nama_lengkap') ?? 'Pengguna';
+$role = $session->get('role') ?? 'admin';
 $segment = service('uri')->getSegment(1) ?: 'dashboard';
+$isSuperadmin = ($role === 'superadmin');
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -26,7 +28,6 @@ $segment = service('uri')->getSegment(1) ?: 'dashboard';
             <img src="<?= base_url('assets/img/maestro-logo-640x640.jpg') ?>" alt="Maestro" class="brand-logo">
             <div class="brand-text">
                 <strong>MaestroInsight</strong>
-                <small>Aplikasi CRM Segmentasi Pelanggan Berbasis Web</small>
             </div>
         </a>
         <nav class="topbar-nav">
@@ -45,9 +46,15 @@ $segment = service('uri')->getSegment(1) ?: 'dashboard';
             <a href="<?= base_url('promosi') ?>" class="nav-link <?= $segment === 'promosi' ? 'active' : '' ?>">
                 <i class="bi bi-megaphone"></i><span>Lakukan Promosi!</span>
             </a>
+            <?php if ($isSuperadmin): ?>
+                <a href="<?= base_url('user') ?>" class="nav-link <?= $segment === 'user' ? 'active' : '' ?>">
+                    <i class="bi bi-person-gear"></i><span>Kelola Akun</span>
+                </a>
+            <?php endif; ?>
         </nav>
         <div class="topbar-user">
             <span class="topbar-user-name"><?= esc($namaLengkap) ?></span>
+            <a href="<?= base_url('profil/ubah-password') ?>" class="btn-logout btn-ubah-password" title="Ubah Password"><i class="bi bi-shield-lock"></i> <span class="logout-label">Ubah Password</span></a>
             <a href="<?= base_url('logout') ?>" class="btn-logout"><i class="bi bi-box-arrow-right"></i> <span class="logout-label">Keluar</span></a>
         </div>
     </header>
@@ -76,9 +83,15 @@ $segment = service('uri')->getSegment(1) ?: 'dashboard';
             <a href="<?= base_url('promosi') ?>" class="<?= $segment === 'promosi' ? 'active' : '' ?>">
                 <i class="bi bi-megaphone"></i> Lakukan Promosi!
             </a>
+            <?php if ($isSuperadmin): ?>
+                <a href="<?= base_url('user') ?>" class="<?= $segment === 'user' ? 'active' : '' ?>">
+                    <i class="bi bi-person-gear"></i> Kelola Akun
+                </a>
+            <?php endif; ?>
         </nav>
         <div class="drawer-footer">
             <span class="drawer-user"><i class="bi bi-person-circle"></i> <?= esc($namaLengkap) ?></span>
+            <a href="<?= base_url('profil/ubah-password') ?>" class="drawer-logout drawer-ubah-password"><i class="bi bi-shield-lock"></i> Ubah Password</a>
             <a href="<?= base_url('logout') ?>" class="drawer-logout"><i class="bi bi-box-arrow-right"></i> Keluar</a>
         </div>
     </aside>

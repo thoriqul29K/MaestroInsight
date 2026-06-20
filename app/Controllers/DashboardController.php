@@ -10,13 +10,11 @@ class DashboardController extends BaseController
 {
     protected PelangganModel $pelanggan;
     protected TransaksiModel $transaksi;
-    protected RfmModel $rfm;
 
     public function __construct()
     {
         $this->pelanggan = new PelangganModel();
         $this->transaksi = new TransaksiModel();
-        $this->rfm       = new RfmModel();
     }
     public function index()
     {

@@ -98,6 +98,8 @@ a:hover { text-decoration: underline; }
     border-radius: 5px; font-size: 11px;
 }
 .btn-logout:hover { background: #dc2626; text-decoration: none; }
+.btn-ubah-password { background: #1034A6; }
+.btn-ubah-password:hover { background: #1034A6; }
 
 .content { padding: 20px; min-height: calc(100vh - var(--topbar-height)); }
 
@@ -717,6 +719,8 @@ a:hover { text-decoration: underline; }
     color: #dc2626;
     text-decoration: none;
 }
+.drawer-ubah-password { background: #1034A6; color: #fff; padding: 8px 12px; border-radius: 5px; }
+.drawer-ubah-password:hover { background: #1d4ed8; color: #fff; text-decoration: none; }
 
 /* =====================================================
    Sidebar overlay backdrop

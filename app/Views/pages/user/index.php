@@ -3,10 +3,10 @@
 <?= $this->section('main') ?>
 <div class="card">
     <div class="card-header">
-        <h2><i class="bi bi-people"></i> Daftar Pelanggan</h2>
-        <div class="card-header-actions" ,>
-            <a href="<?= base_url('pelanggan/create') ?>" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Tambah Pelanggan
+        <h2><i class="bi bi-person-gear"></i> Kelola Akun Pengguna</h2>
+        <div class="card-header-actions">
+            <a href="<?= base_url('user/create') ?>" class="btn btn-primary" style="background-color: #2563eb;">
+                <i class="bi bi-plus-lg"></i> Tambah Akun
             </a>
         </div>
     </div>
@@ -18,8 +18,6 @@
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100" selected>100</option>
-                <option value="200">200</option>
-                <option value="500">500</option>
                 <option value="all">Semua</option>
             </select>
         </div>
@@ -32,12 +30,10 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th class="sortable" data-sort="id">ID Pelanggan <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                    <th class="sortable" data-sort="nama_pelanggan">Nama Pelanggan <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                    <th class="sortable" data-sort="email">Email <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                    <th class="sortable" data-sort="telepon">Telepon <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                    <th class="sortable" data-sort="agama">Agama <i class="bi bi-arrow-down-up sort-icon"></i></th>
-                    <th class="sortable" data-sort="segment">Segmentasi <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="id">ID <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="username">Username <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="nama_lengkap">Nama Lengkap <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                    <th class="sortable" data-sort="role">Role <i class="bi bi-arrow-down-up sort-icon"></i></th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -122,15 +118,40 @@
         color: #6b7280;
         padding: 24px 8px;
     }
+
+    .badge-role {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .badge-superadmin {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-admin {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .action-cell {
+        white-space: nowrap;
+    }
+
+    .action-cell .btn {
+        margin-right: 4px;
+    }
 </style>
 <script>
-    const SEGMENT_LABELS = {
-        loyal: '<span class="badge badge-loyal">Loyal</span>',
-        potential: '<span class="badge badge-potential">Potential</span>',
-        budget: '<span class="badge badge-budget">Budget Hunter</span>',
-        seasonal: '<span class="badge badge-seasonal">Seasonal</span>',
-        at_risk: '<span class="badge badge-risk">At Risk</span>',
+    const ROLE_LABELS = {
+        superadmin: '<span class="badge-role badge-superadmin">Superadmin</span>',
+        admin: '<span class="badge-role badge-admin">Admin</span>',
     };
+
+    const currentUserId = <?= session()->get('user_id') ?>;
 
     function escapeHtml(str) {
         return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -158,7 +179,7 @@
 
     function updateCounter() {
         if (state.total === 0) {
-            counterEl.textContent = '0 pelanggan';
+            counterEl.textContent = '0 akun';
             return;
         }
         let from, to;
@@ -170,33 +191,35 @@
             from = (state.page - 1) * pp + 1;
             to = Math.min(state.page * pp, state.total);
         }
-        counterEl.textContent = `Menampilkan ${from}–${to} dari ${state.total} pelanggan`;
+        counterEl.textContent = `Menampilkan ${from}–${to} dari ${state.total} akun`;
     }
 
     function renderRows(rows) {
         if (!rows.length) {
-            tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Tidak ada data pelanggan.</td></tr>';
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Tidak ada data akun.</td></tr>';
             return;
         }
         let html = '';
-        rows.forEach(p => {
-            const segBadge = SEGMENT_LABELS[p.segment] || '<span class="badge badge-default">Belum</span>';
+        rows.forEach(u => {
+            const roleBadge = ROLE_LABELS[u.role] || '<span class="badge-role badge-admin">Admin</span>';
+            const isCurrentUser = u.id == currentUserId;
+            let actions = `
+                <a href="<?= base_url('user/edit/') ?>${u.id}" class="btn btn-sm btn-edit" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                </a>`;
+            if (!isCurrentUser) {
+                actions += `
+                <a href="<?= base_url('user/delete/') ?>${u.id}" class="btn btn-sm btn-delete" title="Hapus"
+                   onclick="return confirm('Hapus akun ini?')">
+                    <i class="bi bi-trash"></i>
+                </a>`;
+            }
             html += `<tr>
-                <td>${escapeHtml(p.id)}</td>
-                <td>${escapeHtml(p.nama_pelanggan)}</td>
-                <td>${escapeHtml(p.email)}</td>
-                <td>${escapeHtml(p.telepon)}</td>
-                <td>${escapeHtml(p.agama) || '-'}</td>
-                <td>${segBadge}</td>
-                <td class="action-cell">
-                    <a href="<?= base_url('pelanggan/edit/') ?>${p.id}" class="btn btn-sm btn-edit" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    <a href="<?= base_url('pelanggan/delete/') ?>${p.id}" class="btn btn-sm btn-delete" title="Hapus"
-                       onclick="return confirm('Hapus pelanggan ini?')">
-                        <i class="bi bi-trash"></i>
-                    </a>
-                </td>
+                <td>${escapeHtml(u.id)}</td>
+                <td>${escapeHtml(u.username)}</td>
+                <td>${escapeHtml(u.nama_lengkap)}</td>
+                <td>${roleBadge}</td>
+                <td class="action-cell">${actions}</td>
             </tr>`;
         });
         tbody.innerHTML = html;
@@ -247,7 +270,7 @@
             page: state.page,
         });
         try {
-            const res = await fetch(`<?= base_url('pelanggan/data') ?>?${params.toString()}`, {
+            const res = await fetch(`<?= base_url('user/data') ?>?${params.toString()}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -262,7 +285,7 @@
             updateCounter();
             updateSortIcons();
         } catch (e) {
-            tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Gagal memuat data: ${escapeHtml(e.message)}</td></tr>`;
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Gagal memuat data: ${escapeHtml(e.message)}</td></tr>`;
             counterEl.textContent = '';
             pagerEl.innerHTML = '';
         }

@@ -41,4 +41,20 @@ $routes->group('', ['filter' => 'auth'], function ($routes) {
     $routes->post('promosi/kirim',  'PromosiController::kirim');
     $routes->get('promosi/riwayat', 'PromosiController::riwayat');
     $routes->post('promosi/riwayat/hapus', 'PromosiController::hapusLog');
+
+    /* ===== Ubah Password (semua user) ===== */
+    $routes->get('profil/ubah-password',    'ProfilController::ubahPassword');
+    $routes->post('profil/simpan-password', 'ProfilController::simpanPassword');
+
+    /* ===== Manajemen Akun (superadmin only) ===== */
+    $routes->group('', ['filter' => 'role'], function ($routes) {
+        $routes->get('user',                        'UserController::index');
+        $routes->get('user/data',                   'UserController::data');
+        $routes->get('user/create',                 'UserController::create');
+        $routes->post('user/store',                 'UserController::store');
+        $routes->get('user/edit/(:num)',            'UserController::edit/$1');
+        $routes->post('user/update/(:num)',         'UserController::update/$1');
+        $routes->get('user/delete/(:num)',          'UserController::delete/$1');
+        $routes->post('user/reset-password/(:num)', 'UserController::resetPassword/$1');
+    });
 });
