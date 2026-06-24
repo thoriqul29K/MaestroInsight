@@ -442,6 +442,7 @@ a:hover { text-decoration: underline; }
 .pagination-info {
     font-size: 13px;
     color: var(--text-muted);
+    order: 2;
 }
 
 /* Sortable headers */

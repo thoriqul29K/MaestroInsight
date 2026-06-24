@@ -12,16 +12,23 @@
     </div>
 
     <div class="table-toolbar">
-        <div class="per-page-selector">
-            <label>Baris per halaman:</label>
-            <select id="perPage" class="form-select per-page-select">
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100" selected>100</option>
-                <option value="200">200</option>
-                <option value="500">500</option>
-                <option value="all">Semua</option>
-            </select>
+        <div class="toolbar-left">
+            <div class="per-page-selector">
+                <label>Baris per halaman:</label>
+                <select id="perPage" class="form-select per-page-select">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                    <option value="all">Semua</option>
+                </select>
+            </div>
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="search" id="searchInput" class="form-control"
+                       placeholder="Cari nama pelanggan…" autocomplete="off">
+            </div>
         </div>
         <div class="pagination-info">
             <span id="rowCounter" class="row-counter">Memuat…</span>
@@ -54,6 +61,50 @@
     .row-counter {
         color: #6b7280;
         font-size: 0.9rem;
+    }
+
+    .search-box {
+        position: relative;
+        flex: 0 1 280px;
+        min-width: 220px;
+        max-width: 320px;
+        order: 0;
+    }
+
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        flex: 1 1 auto;
+    }
+
+    .search-box .bi-search {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+
+    .search-box input.form-control {
+        padding-left: 32px;
+        height: 38px;
+    }
+
+    @media (max-width: 640px) {
+        .table-toolbar {
+            flex-wrap: wrap;
+        }
+        .toolbar-left {
+            flex: 1 1 100%;
+        }
+        .search-box {
+            max-width: 100%;
+            flex: 1 1 100%;
+        }
     }
 
     .data-table th.sortable {
@@ -149,14 +200,26 @@
         perPage: document.getElementById('perPage').value || '100',
         total: 0,
         totalPages: 0,
+        search: '',
+        allRows: [],
     };
 
     const tbody = document.getElementById('tbody');
     const counterEl = document.getElementById('rowCounter');
     const pagerEl = document.getElementById('pagerNav');
     const perPageEl = document.getElementById('perPage');
+    const searchEl = document.getElementById('searchInput');
 
     function updateCounter() {
+        if (state.search && state.search.length) {
+            const matched = filteredRows().length;
+            if (matched === 0) {
+                counterEl.textContent = `Tidak ada hasil untuk "${state.search}"`;
+                return;
+            }
+            counterEl.textContent = `Menampilkan ${matched} hasil untuk "${state.search}"`;
+            return;
+        }
         if (state.total === 0) {
             counterEl.textContent = '0 pelanggan';
             return;
@@ -171,6 +234,24 @@
             to = Math.min(state.page * pp, state.total);
         }
         counterEl.textContent = `Menampilkan ${from}–${to} dari ${state.total} pelanggan`;
+    }
+
+    function filteredRows() {
+        const q = state.search.trim().toLowerCase();
+        if (!q) return state.allRows;
+        return state.allRows.filter(p =>
+            String(p.nama_pelanggan ?? '').toLowerCase().includes(q)
+        );
+    }
+
+    function applySearchAndRender() {
+        renderRows(filteredRows());
+        if (state.search && state.search.length) {
+            pagerEl.innerHTML = '';
+        } else {
+            renderPager();
+        }
+        updateCounter();
     }
 
     function renderRows(rows) {
@@ -257,9 +338,8 @@
             state.total = data.total;
             state.totalPages = data.total_pages;
             state.page = data.page;
-            renderRows(data.rows);
-            renderPager();
-            updateCounter();
+            state.allRows = data.rows || [];
+            applySearchAndRender();
             updateSortIcons();
         } catch (e) {
             tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Gagal memuat data: ${escapeHtml(e.message)}</td></tr>`;
@@ -271,6 +351,10 @@
     perPageEl.addEventListener('change', () => {
         state.perPage = perPageEl.value;
         state.page = 1;
+        if (state.search) {
+            state.search = '';
+            searchEl.value = '';
+        }
         fetchData();
     });
 
@@ -284,6 +368,10 @@
                 state.dir = 'asc';
             }
             state.page = 1;
+            if (state.search) {
+                state.search = '';
+                searchEl.value = '';
+            }
             fetchData();
         });
     });
@@ -295,6 +383,15 @@
         if (!p || p < 1 || p > state.totalPages || p === state.page) return;
         state.page = p;
         fetchData();
+    });
+
+    let searchDebounce = null;
+    searchEl.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => {
+            state.search = searchEl.value;
+            applySearchAndRender();
+        }, 200);
     });
 
     fetchData();
