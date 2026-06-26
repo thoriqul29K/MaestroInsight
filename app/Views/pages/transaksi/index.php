@@ -21,6 +21,26 @@
                 <option value="all">Semua</option>
             </select>
         </div>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-toggle">
+                    <input type="checkbox" id="enableTanggal" checked>
+                    <span>Tanggal</span>
+                </label>
+                <input type="text" id="tanggalDari" class="filter-input datepicker" placeholder="Dari" readonly>
+                <span class="filter-sep">–</span>
+                <input type="text" id="tanggalSampai" class="filter-input datepicker" placeholder="Sampai" readonly>
+            </div>
+            <div class="filter-group">
+                <label class="filter-toggle">
+                    <input type="checkbox" id="enableJumlah" checked>
+                    <span>Jumlah (Rp)</span>
+                </label>
+                <input type="number" id="jumlahMin" class="filter-input" placeholder="Min" min="0">
+                <span class="filter-sep">–</span>
+                <input type="number" id="jumlahMax" class="filter-input" placeholder="Max" min="0">
+            </div>
+        </div>
         <div class="pagination-info">
             <span id="rowCounter" class="row-counter">Memuat…</span>
         </div>
@@ -118,6 +138,84 @@
         color: #6b7280;
         padding: 24px 8px;
     }
+
+    .filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: 0 16px 12px;
+    }
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-toggle {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #374151;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    .filter-toggle input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: #2563eb;
+        cursor: pointer;
+    }
+
+    .filter-input {
+        padding: 6px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        background: #fff;
+        color: #374151;
+        outline: none;
+        transition: border-color 0.2s, opacity 0.2s, background 0.2s;
+    }
+
+    .filter-input:focus {
+        border-color: #2563eb;
+    }
+
+    .filter-input:disabled {
+        background: #f3f4f6;
+        color: #9ca3af;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .datepicker {
+        width: 130px;
+        cursor: pointer;
+    }
+
+    .datepicker:disabled {
+        cursor: not-allowed;
+    }
+
+    .filter-sep {
+        color: #9ca3af;
+        font-size: 0.85rem;
+    }
+
+    input[type="number"].filter-input {
+        width: 110px;
+    }
+
+    input[type="number"].filter-input:disabled {
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+    }
 </style>
 <script>
     function escapeHtml(str) {
@@ -151,12 +249,101 @@
         perPage: document.getElementById('perPage').value || '100',
         total: 0,
         totalPages: 0,
+        tanggalDari: '',
+        tanggalSampai: '',
+        jumlahMin: '',
+        jumlahMax: '',
+        enableTanggal: true,
+        enableJumlah: true,
     };
 
     const tbody = document.getElementById('tbody');
     const counterEl = document.getElementById('rowCounter');
     const pagerEl = document.getElementById('pagerNav');
     const perPageEl = document.getElementById('perPage');
+    const enableTanggalEl = document.getElementById('enableTanggal');
+    const enableJumlahEl = document.getElementById('enableJumlah');
+    const tanggalDariEl = document.getElementById('tanggalDari');
+    const tanggalSampaiEl = document.getElementById('tanggalSampai');
+    const jumlahMinEl = document.getElementById('jumlahMin');
+    const jumlahMaxEl = document.getElementById('jumlahMax');
+
+    flatpickr('.datepicker', {
+        dateFormat: 'd/m/Y',
+        locale: 'default',
+        disableMobile: true,
+        onChange: function (selectedDates, dateStr, instance) {
+            const isDari = instance.input.id === 'tanggalDari';
+            if (isDari) {
+                state.tanggalDari = dateStr;
+                if (selectedDates[0] && !state.tanggalSampai) {
+                    tanggalSampaiEl._flatpickr.set('minDate', selectedDates[0]);
+                }
+            } else {
+                state.tanggalSampai = dateStr;
+                if (selectedDates[0]) {
+                    tanggalDariEl._flatpickr.set('maxDate', selectedDates[0]);
+                }
+            }
+            state.page = 1;
+            fetchData();
+        },
+        onClear: function (instance) {
+            if (instance.input.id === 'tanggalDari') {
+                state.tanggalDari = '';
+                tanggalSampaiEl._flatpickr.set('minDate', null);
+            } else {
+                state.tanggalSampai = '';
+                tanggalDariEl._flatpickr.set('maxDate', null);
+            }
+            state.page = 1;
+            fetchData();
+        }
+    });
+
+    function setTanggalEnabled(enabled) {
+        state.enableTanggal = enabled;
+        tanggalDariEl.disabled = !enabled;
+        tanggalSampaiEl.disabled = !enabled;
+        if (!enabled) {
+            state.tanggalDari = '';
+            state.tanggalSampai = '';
+            tanggalDariEl._flatpickr.clear();
+            tanggalSampaiEl._flatpickr.clear();
+        }
+        state.page = 1;
+        fetchData();
+    }
+
+    function setJumlahEnabled(enabled) {
+        state.enableJumlah = enabled;
+        jumlahMinEl.disabled = !enabled;
+        jumlahMaxEl.disabled = !enabled;
+        if (!enabled) {
+            state.jumlahMin = '';
+            state.jumlahMax = '';
+            jumlahMinEl.value = '';
+            jumlahMaxEl.value = '';
+        }
+        state.page = 1;
+        fetchData();
+    }
+
+    enableTanggalEl.addEventListener('change', () => setTanggalEnabled(enableTanggalEl.checked));
+    enableJumlahEl.addEventListener('change', () => setJumlahEnabled(enableJumlahEl.checked));
+
+    let jumlahDebounce = null;
+    function onJumlahInput() {
+        clearTimeout(jumlahDebounce);
+        jumlahDebounce = setTimeout(() => {
+            state.jumlahMin = jumlahMinEl.value;
+            state.jumlahMax = jumlahMaxEl.value;
+            state.page = 1;
+            fetchData();
+        }, 300);
+    }
+    jumlahMinEl.addEventListener('input', onJumlahInput);
+    jumlahMaxEl.addEventListener('input', onJumlahInput);
 
     function updateCounter() {
         if (state.total === 0) {
@@ -245,6 +432,14 @@
             per_page: state.perPage,
             page: state.page,
         });
+        if (state.enableTanggal) {
+            if (state.tanggalDari) params.set('tanggal_dari', state.tanggalDari);
+            if (state.tanggalSampai) params.set('tanggal_sampai', state.tanggalSampai);
+        }
+        if (state.enableJumlah) {
+            if (state.jumlahMin) params.set('jumlah_min', state.jumlahMin);
+            if (state.jumlahMax) params.set('jumlah_max', state.jumlahMax);
+        }
         try {
             const res = await fetch(`<?= base_url('transaksi/data') ?>?${params.toString()}`, {
                 headers: {

@@ -27,7 +27,7 @@ class RfmService
                 COALESCE(COUNT(t.id), 0) AS frequency,
                 COALESCE(SUM(t.jumlah_transaksi), 0) AS monetary
             FROM tb_pelanggan p
-            LEFT JOIN tb_transaksi t ON t.id_pelanggan = p.id
+            INNER JOIN tb_transaksi t ON t.id_pelanggan = p.id
             GROUP BY p.id
         ";
 
@@ -38,7 +38,7 @@ class RfmService
         foreach ($rows as $r) {
             $tanggalAkhir = strtotime($r['tanggal_terakhir']);
             $today        = strtotime(date('Y-m-d'));
-            $recency      = ($r['frequency'] > 0) ? max(0, (int) (($today - $tanggalAkhir) / 86400)) : 9999;
+            $recency      = max(0, (int) (($today - $tanggalAkhir) / 86400));
 
             $data[] = [
                 'id_pelanggan' => (int) $r['id_pelanggan'],
@@ -146,5 +146,53 @@ class RfmService
         }
         fclose($fh);
         return $count;
+    }
+
+    public function refineSeasonalSegments(float $threshold = 0.7): array
+    {
+        $db = \Config\Database::connect();
+
+        $rows = $db->table('tb_transaksi t')
+            ->select('t.id_pelanggan, MONTH(t.tanggal_transaksi) AS bulan, p.segment')
+            ->join('tb_pelanggan p', 'p.id = t.id_pelanggan', 'left')
+            ->orderBy('t.id_pelanggan')
+            ->get()
+            ->getResultArray();
+
+        $pelangganData = [];
+        foreach ($rows as $r) {
+            $id = (int) $r['id_pelanggan'];
+            if (! isset($pelangganData[$id])) {
+                $pelangganData[$id] = ['bulan' => [], 'segment' => $r['segment']];
+            }
+            $pelangganData[$id]['bulan'][] = (int) $r['bulan'];
+        }
+
+        $refinedCount = 0;
+        foreach ($pelangganData as $idPelanggan => $data) {
+            $currentSegment = $data['segment'];
+
+            if (in_array($currentSegment, ['loyal', 'at_risk'], true)) {
+                continue;
+            }
+
+            $totalTx = count($data['bulan']);
+            if ($totalTx < 2) {
+                continue;
+            }
+
+            $monthCounts = array_count_values($data['bulan']);
+            $maxMonthCount = max($monthCounts);
+            $peakRatio = $maxMonthCount / $totalTx;
+
+            if ($peakRatio >= $threshold) {
+                $db->table('tb_pelanggan')
+                    ->where('id', $idPelanggan)
+                    ->update(['segment' => 'seasonal']);
+                $refinedCount++;
+            }
+        }
+
+        return ['refined' => $refinedCount];
     }
 }

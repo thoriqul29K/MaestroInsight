@@ -113,23 +113,27 @@ class TransaksiController extends BaseController
             ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
             ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left');
 
+        $this->applyFilters($builder);
+
         $total = $builder->countAllResults(true);
 
+        $rowsBuilder = $this->model
+            ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
+            ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left');
+
+        $this->applyFilters($rowsBuilder);
+
         if ($perPage === 'all') {
-            $rows = $this->model
-                ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
-                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left')
+            $rows = $rowsBuilder
                 ->orderBy($sort, $dir)
                 ->findAll();
             $totalPages = $total > 0 ? 1 : 0;
             $page       = 1;
         } else {
             $offset     = ($page - 1) * (int) $perPage;
-            $rows       = $this->model
-                ->select('tb_transaksi.*, tb_pelanggan.nama_pelanggan')
-                ->join('tb_pelanggan', 'tb_pelanggan.id = tb_transaksi.id_pelanggan', 'left')
+            $rows       = $rowsBuilder
                 ->orderBy($sort, $dir)
-                ->findAll((int) $perPage - 1, $offset);
+                ->findAll((int) $perPage, $offset);
             $totalPages = (int) ceil($total / (int) $perPage);
         }
 
@@ -234,5 +238,32 @@ class TransaksiController extends BaseController
     {
         $this->model->delete($id);
         return redirect()->to('/transaksi')->with('success', 'Transaksi dihapus.');
+    }
+
+    private function applyFilters($builder): void
+    {
+        $tanggalDari  = $this->request->getGet('tanggal_dari');
+        $tanggalSampai = $this->request->getGet('tanggal_sampai');
+        $jumlahMin    = $this->request->getGet('jumlah_min');
+        $jumlahMax    = $this->request->getGet('jumlah_max');
+
+        if (! empty($tanggalDari)) {
+            $d = \DateTime::createFromFormat('d/m/Y', $tanggalDari);
+            if ($d) {
+                $builder->where('tb_transaksi.tanggal_transaksi >=', $d->format('Y-m-d'));
+            }
+        }
+        if (! empty($tanggalSampai)) {
+            $d = \DateTime::createFromFormat('d/m/Y', $tanggalSampai);
+            if ($d) {
+                $builder->where('tb_transaksi.tanggal_transaksi <=', $d->format('Y-m-d'));
+            }
+        }
+        if ($jumlahMin !== null && $jumlahMin !== '' && is_numeric($jumlahMin)) {
+            $builder->where('tb_transaksi.jumlah_transaksi >=', (float) $jumlahMin);
+        }
+        if ($jumlahMax !== null && $jumlahMax !== '' && is_numeric($jumlahMax)) {
+            $builder->where('tb_transaksi.jumlah_transaksi <=', (float) $jumlahMax);
+        }
     }
 }

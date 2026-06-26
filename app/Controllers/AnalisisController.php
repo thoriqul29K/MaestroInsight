@@ -251,7 +251,12 @@ class AnalisisController extends BaseController
         $this->writeProgress(85, 'clustering', 'Mengimpor hasil segmentasi...');
         $count = $this->rfm->importSegmentResults($out);
 
-        $this->writeProgress(95, 'clustering', "Berhasil mensegmentasi {$count} pelanggan.");
+        $this->writeProgress(92, 'clustering', 'Menganalisis pola bulan transaksi (Phase 2)...');
+        $threshold = (float) (env('SEASONAL_PEAK_THRESHOLD', 0.7));
+        $refineResult = $this->rfm->refineSeasonalSegments($threshold);
+        $refined = (int) ($refineResult['refined'] ?? 0);
+
+        $this->writeProgress(95, 'clustering', "Berhasil mensegmentasi {$count} pelanggan. {$refined} pelanggan diidentifikasi sebagai seasonal.");
 
         return ['count' => $count];
     }
