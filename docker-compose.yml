@@ -1,0 +1,106 @@
+name: maestroinsight
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: maestroinsight/app:latest
+    container_name: maestro_app
+    restart: unless-stopped
+    ports:
+      - "8123:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      python:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DOCKER_CLUSTER: "1"
+      PYTHON_CONTAINER: maestro_python
+      PYTHON_SCRIPT_PATH: /app/clustering.py
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-0}
+      AUTO_OPTIMIZE: ${AUTO_OPTIMIZE:-0}
+      app.baseURL: "http://localhost:8123/"
+      database.default.hostname: db
+      database.default.database: ${MYSQL_DATABASE:-db_maestrocrm}
+      database.default.username: root
+      database.default.password: ${DB_ROOT_PASSWORD:-rootpass}
+      database.default.port: "3306"
+      database.default.DBDriver: MySQLi
+    volumes:
+      - writable:/var/www/html/writable
+      - rfm_share:/data
+    networks:
+      - maestro_net
+
+  python:
+    build:
+      context: .
+      dockerfile: docker/clustering/Dockerfile
+    image: maestroinsight/python:latest
+    container_name: maestro_python
+    restart: unless-stopped
+    working_dir: /data
+    volumes:
+      - rfm_share:/data
+    networks:
+      - maestro_net
+
+  db:
+    image: mysql:8.0
+    container_name: maestro_db
+    restart: unless-stopped
+    ports:
+      - "8987:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-db_maestrocrm}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-authentication-plugin=mysql_native_password
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-rootpass}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks:
+      - maestro_net
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2
+    container_name: maestro_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: "3306"
+      PMA_ARBITRARY: "1"
+      UPLOAD_LIMIT: 50M
+      MAX_EXECUTION_TIME: 300
+      MEMORY_LIMIT: 256M
+      PMA_CONFIG_FILE: /etc/phpmyadmin/config.user.inc.php
+      PMA_VOLUME_NAME: ${MYSQL_DATABASE:-db_maestrocrm}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - maestro_net
+
+volumes:
+  writable:
+  rfm_share:
+  db_data:
+
+networks:
+  maestro_net:
+    driver: bridge

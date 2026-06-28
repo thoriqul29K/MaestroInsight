@@ -2,6 +2,9 @@
 
 namespace App\Controllers;
 
+use App\Libraries\Rfm\DockerRfmRunner;
+use App\Libraries\Rfm\HostRfmRunner;
+use App\Libraries\Rfm\RfmRunnerInterface;
 use App\Models\PelangganModel;
 use App\Models\RfmModel;
 use App\Services\RfmService;
@@ -14,8 +17,8 @@ class AnalisisController extends BaseController
 
     public function __construct()
     {
-        $this->rfm      = new RfmService();
-        $this->rfmModel = new RfmModel();
+        $this->rfm       = new RfmService();
+        $this->rfmModel  = new RfmModel();
         $this->pelanggan = new PelangganModel();
     }
 
@@ -216,23 +219,14 @@ class AnalisisController extends BaseController
         }
         $this->writeProgress(50, 'clustering', 'Data diekspor. Menjalankan Python hierarchical clustering...');
 
-        $python = $this->findPython();
-        $script = ROOTPATH . 'app' . DIRECTORY_SEPARATOR . 'Libraries' . DIRECTORY_SEPARATOR . 'clustering.py';
+        $runner = $this->makeRunner();
 
-        if (! $python || ! file_exists($script)) {
+        if (! $runner instanceof RfmRunnerInterface) {
             @unlink($in);
             return ['error' => 'Python atau script clustering tidak ditemukan.'];
         }
 
-        $cmd = escapeshellarg($python)
-            . ' ' . escapeshellarg($script)
-            . ' ' . escapeshellarg($in)
-            . ' ' . escapeshellarg($out)
-            . ' ' . escapeshellarg('--timeout')
-            . ' ' . escapeshellarg((string) $timeoutSeconds)
-            . ' 2>&1';
-
-        $result = $this->runWithTimeout($cmd, $timeoutSeconds);
+        $result = $runner->run($in, $out, $timeoutSeconds);
         $output = $result['output'];
 
         if ($result['timed_out']) {
@@ -245,7 +239,7 @@ class AnalisisController extends BaseController
             @unlink($in);
             $snippet = trim($output) !== '' ? substr($output, 0, 500) : '(kosong)';
             return [
-                'error' => "Gagal menjalankan clustering. Output Python: {$snippet}",
+                'error' => "Gagal menjalankan clustering. Output runner: {$snippet}",
             ];
         }
         $this->writeProgress(85, 'clustering', 'Mengimpor hasil segmentasi...');
@@ -259,6 +253,22 @@ class AnalisisController extends BaseController
         $this->writeProgress(95, 'clustering', "Berhasil mensegmentasi {$count} pelanggan. {$upgraded} di-upgrade ke seasonal, {$downgraded} di-downgrade dari seasonal.");
 
         return ['count' => $count];
+    }
+
+    private function makeRunner(): ?RfmRunnerInterface
+    {
+        $useDocker = (string) (getenv('DOCKER_CLUSTER') ?: env('DOCKER_CLUSTER', '0')) === '1';
+
+        if ($useDocker) {
+            return new DockerRfmRunner();
+        }
+
+        $host = new HostRfmRunner();
+        $python = trim((string) shell_exec(
+            (stripos(PHP_OS, 'WIN') === 0 ? 'where python 2>nul' : 'command -v python 2>/dev/null')
+        ));
+
+        return $python !== '' ? $host : null;
     }
 
     private function writeProgress(int $percent, string $stage, string $detail): void
@@ -295,98 +305,5 @@ class AnalisisController extends BaseController
             'stage'   => (string) ($data['stage'] ?? 'idle'),
             'detail'  => (string) ($data['detail'] ?? ''),
         ];
-    }
-
-    private function runWithTimeout(string $cmd, int $timeoutSeconds): array
-    {
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $pipes = [];
-        $proc  = @proc_open($cmd, $descriptors, $pipes);
-
-        if (! is_resource($proc)) {
-            return [
-                'timed_out' => false,
-                'output'    => 'Tidak dapat memulai proses Python.',
-            ];
-        }
-
-        fclose($pipes[0]);
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
-
-        $output = '';
-        $start  = time();
-        $status = null;
-
-        while (true) {
-            $status = proc_get_status($proc);
-            $output .= (string) stream_get_contents($pipes[1]);
-            $output .= (string) stream_get_contents($pipes[2]);
-
-            if (! $status['running']) {
-                $output .= (string) stream_get_contents($pipes[1]);
-                $output .= (string) stream_get_contents($pipes[2]);
-                break;
-            }
-
-            if ((time() - $start) >= $timeoutSeconds) {
-                $this->terminateProcess($proc, $pipes);
-                return [
-                    'timed_out' => true,
-                    'output'    => $output,
-                ];
-            }
-
-            usleep(100000);
-        }
-
-        foreach ($pipes as $p) {
-            if (is_resource($p)) {
-                fclose($p);
-            }
-        }
-        proc_close($proc);
-
-        return [
-            'timed_out' => false,
-            'output'    => $output,
-        ];
-    }
-
-    private function findPython(): ?string
-    {
-        $candidates = ['python', 'python3', 'py'];
-        foreach ($candidates as $cmd) {
-            $raw = trim((string) shell_exec("where $cmd 2>nul"));
-            if ($raw === '') {
-                continue;
-            }
-            $lines = preg_split('/\r\n|\r|\n/', $raw);
-            $first = trim((string) ($lines[0] ?? ''));
-            if ($first !== '') {
-                return $first;
-            }
-        }
-        return null;
-    }
-
-    private function terminateProcess($proc, array $pipes): void
-    {
-        if (is_resource($proc)) {
-            @proc_terminate($proc, 9);
-        }
-        foreach ($pipes as $p) {
-            if (is_resource($p)) {
-                @fclose($p);
-            }
-        }
-        if (is_resource($proc)) {
-            @proc_close($proc);
-        }
     }
 }
