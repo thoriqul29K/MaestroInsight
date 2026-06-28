@@ -148,13 +148,15 @@ class RfmService
         return $count;
     }
 
-    public function refineSeasonalSegments(float $threshold = 0.7): array
+    public function refineSeasonalSegments(): array
     {
+        $threshold = 0.7;
         $db = \Config\Database::connect();
 
         $rows = $db->table('tb_transaksi t')
-            ->select('t.id_pelanggan, MONTH(t.tanggal_transaksi) AS bulan, p.segment')
+            ->select('t.id_pelanggan, MONTH(t.tanggal_transaksi) AS bulan, p.segment AS current_segment, r.recency, r.monetary')
             ->join('tb_pelanggan p', 'p.id = t.id_pelanggan', 'left')
+            ->join('tb_rfm r', 'r.id_pelanggan = t.id_pelanggan', 'left')
             ->orderBy('t.id_pelanggan')
             ->get()
             ->getResultArray();
@@ -163,12 +165,19 @@ class RfmService
         foreach ($rows as $r) {
             $id = (int) $r['id_pelanggan'];
             if (! isset($pelangganData[$id])) {
-                $pelangganData[$id] = ['bulan' => [], 'segment' => $r['segment']];
+                $pelangganData[$id] = [
+                    'bulan'         => [],
+                    'segment'       => $r['current_segment'],
+                    'recency'       => (int) ($r['recency'] ?? 0),
+                    'monetary'      => (int) ($r['monetary'] ?? 0),
+                ];
             }
             $pelangganData[$id]['bulan'][] = (int) $r['bulan'];
         }
 
-        $refinedCount = 0;
+        $upgraded   = 0;
+        $downgraded = 0;
+
         foreach ($pelangganData as $idPelanggan => $data) {
             $currentSegment = $data['segment'];
 
@@ -181,18 +190,35 @@ class RfmService
                 continue;
             }
 
-            $monthCounts = array_count_values($data['bulan']);
+            $monthCounts   = array_count_values($data['bulan']);
             $maxMonthCount = max($monthCounts);
-            $peakRatio = $maxMonthCount / $totalTx;
+            $peakRatio     = $maxMonthCount / $totalTx;
 
             if ($peakRatio >= $threshold) {
                 $db->table('tb_pelanggan')
                     ->where('id', $idPelanggan)
                     ->update(['segment' => 'seasonal']);
-                $refinedCount++;
+                $upgraded++;
+            } elseif ($currentSegment === 'seasonal') {
+                $newSegment = $this->determineDowngradeSegment($data['recency'], $data['monetary']);
+                $db->table('tb_pelanggan')
+                    ->where('id', $idPelanggan)
+                    ->update(['segment' => $newSegment]);
+                $downgraded++;
             }
         }
 
-        return ['refined' => $refinedCount];
+        return ['upgraded' => $upgraded, 'downgraded' => $downgraded];
+    }
+
+    private function determineDowngradeSegment(int $recency, int $monetary): string
+    {
+        if ($recency > 180) {
+            return 'at_risk';
+        }
+        if ($monetary < 5_000_000) {
+            return 'budget';
+        }
+        return 'potential';
     }
 }
