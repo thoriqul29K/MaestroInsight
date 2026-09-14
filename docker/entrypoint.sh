@@ -47,6 +47,17 @@ append_env "database.default.DBDriver" "${DB_DRIVER:-MySQLi}"
 append_env "encryption.key"            "${ENCRYPTION_KEY:-}"
 append_env "CI_ENVIRONMENT"            "${CI_ENV_ENV:-production}"
 
+append_env "email.protocol"       "${SMTP_PROTOCOL:-smtp}"
+append_env "email.SMTPHost"       "${SMTP_HOST:-}"
+append_env "email.SMTPPort"       "${SMTP_PORT:-587}"
+append_env "email.SMTPUser"       "${SMTP_USER:-}"
+append_env "email.SMTPPass"       "${SMTP_PASS:-}"
+append_env "email.SMTPCrypto"     "${SMTP_CRYPTO:-tls}"
+append_env "email.fromEmail"      "${EMAIL_FROM:-}"
+append_env "email.fromName"       "${EMAIL_FROM_NAME:-Maestro}"
+append_env "email.mailType"       "${EMAIL_MAIL_TYPE:-html}"
+append_env "email.SMTPTimeout"    "${SMTP_TIMEOUT:-10}"
+
 chown -R www-data:www-data writable
 chmod -R ug+rwX writable
 

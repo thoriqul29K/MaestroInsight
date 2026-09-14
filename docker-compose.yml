@@ -32,6 +32,13 @@ services:
       database.default.password: ${DB_ROOT_PASSWORD:-rootpass}
       database.default.port: "3306"
       database.default.DBDriver: MySQLi
+      SMTP_HOST: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_USER: "maestrotour2026@gmail.com"
+      SMTP_PASS: "esyrolgfbvsjfegf"
+      SMTP_CRYPTO: "tls"
+      EMAIL_FROM: "maestrotour2026@gmail.com"
+      EMAIL_FROM_NAME: "Maestro Wisata Raya"
     volumes:
       - writable:/var/www/html/writable
       - rfm_share:/data
