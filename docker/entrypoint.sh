@@ -31,9 +31,9 @@ append_env() {
     fi
     escaped=$(printf '%s\n' "$val" | sed -e 's/[\/&]/\\&/g')
     if grep -qE "^${key}[[:space:]]*=" .env; then
-        sed -i.bak -E "s|^${key}[[:space:]]*=.*|${key} = ${escaped}|" .env
+        sed -i.bak -E "s|^${key}[[:space:]]*=.*|${key} = \"${escaped}\"|" .env
     else
-        printf '%s = %s\n' "$key" "$val" >> .env
+        printf '%s = "%s"\n' "$key" "$val" >> .env
     fi
 }
 
